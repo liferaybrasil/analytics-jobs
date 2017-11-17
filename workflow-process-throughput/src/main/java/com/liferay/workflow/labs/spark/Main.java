@@ -5,21 +5,22 @@ import static com.datastax.spark.connector.japi.CassandraJavaUtil.mapRowToTuple;
 import static com.datastax.spark.connector.japi.CassandraJavaUtil.mapTupleToRow;
 import static com.datastax.spark.connector.japi.CassandraJavaUtil.someColumns;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Date;
 import java.util.Map;
 
+import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.Optional;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.api.java.function.PairFunction;
 import org.apache.spark.sql.AnalysisException;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.streaming.Trigger;
+
+import com.datastax.spark.connector.japi.CassandraRow;
 
 import scala.Tuple2;
 import scala.Tuple3;
@@ -36,33 +37,31 @@ public class Main {
     }
 
     protected static void doRun() throws AnalysisException {
-        SparkSession spark = SparkSession.builder().master("local")
-            .appName("Workflow Throughput")
-            .config("spark.cassandra.connection.host", "192.168.108.90")
-            .config("spark.cassandra.auth.username", "cassandra")
-            .config("spark.cassandra.auth.password", "cassandra").getOrCreate();
+        SparkConf conf = new SparkConf();
+        conf.setAppName("Workflow Throughput");
+        conf.set("spark.cassandra.connection.host", "192.168.108.90");
+        conf.set("spark.cassandra.auth.username", "cassandra");
+        conf.set("spark.cassandra.auth.password", "cassandra");
 
-        Dataset ds = spark.read().format("org.apache.spark.sql.cassandra")
-            .option("table", "analyticsevent").option("keyspace", "analytics")
-            .load();
+        JavaSparkContext sc = new JavaSparkContext(conf);
 
-        ds.createTempView("analyticsevent");
+        Instant now = Instant.now().minus(5, ChronoUnit.MINUTES);
 
-        LocalDateTime now = LocalDateTime.now().minus(5, ChronoUnit.MINUTES);
+        JavaPairRDD<Long, Long> pairs = javaFunctions(sc)
+            .cassandraTable("analytics", "analyticsevent")
+            .select("eventid", "eventproperties")
+            .where("eventid = ? and createdate > ?", "KALEO_INSTANCE_COMPLETE",
+                new Date().from(now))
+            .mapToPair(new PairFunction<CassandraRow, Long, Long>() {
 
-        JavaPairRDD<Long, Long> pairs = ds.sqlContext()
-            .sql("select eventid, eventproperties from analyticsevent")
-            .filter("eventid = 'KALEO_INSTANCE_COMPLETE' and createdate > '"
-                + now + "'")
-            .javaRDD().mapToPair(new PairFunction<Row, Long, Long>() {
                 @Override
-                public Tuple2<Long, Long> call(Row row) throws Exception {
-                    Map<String, String> properties = row.getJavaMap(1);
-
-                    return new Tuple2<>(
-                        Long.valueOf(
-                            properties.get("kaleoDefinitionVersionId")),
-                        Long.valueOf(properties.get("duration")));
+                public Tuple2<Long, Long> call(CassandraRow cassandraRow)
+                    throws Exception {
+                    Map<Object, Object> properties = cassandraRow
+                        .getMap("eventproperties");
+                    return new Tuple2<>(Long.valueOf(
+                        (String) properties.get("kaleoDefinitionVersionId")),
+                        Long.valueOf((String) properties.get("duration")));
                 }
             });
 
@@ -90,11 +89,10 @@ public class Main {
             }
         };
 
-        JavaRDD<Tuple3<Long, Long, Long>> cassandraRDDTuple = javaFunctions(
-            spark.sparkContext())
-                .cassandraTable("analytics", "workflowprocessavg",
-                    mapRowToTuple(Long.class, Long.class, Long.class))
-                .select("kaleodefinitionversionid", "total", "totalduration");
+        JavaRDD<Tuple3<Long, Long, Long>> cassandraRDDTuple = javaFunctions(sc)
+            .cassandraTable("analytics", "workflowprocessavg",
+                mapRowToTuple(Long.class, Long.class, Long.class))
+            .select("kaleodefinitionversionid", "total", "totalduration");
 
         JavaPairRDD<Long, AvgCount> computationRDDPair = pairs
             .combineByKey(createAcc, addAndCount, combine);
