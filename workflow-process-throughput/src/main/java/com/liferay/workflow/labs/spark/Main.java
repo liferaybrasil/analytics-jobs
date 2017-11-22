@@ -37,110 +37,102 @@ public class Main {
     }
 
     protected static void doRun() throws AnalysisException {
-        SparkConf conf = new SparkConf();
-        conf.setAppName("Workflow Throughput");
-        conf.set("spark.cassandra.connection.host", "192.168.108.90");
-        conf.set("spark.cassandra.auth.username", "cassandra");
-        conf.set("spark.cassandra.auth.password", "cassandra");
+        SparkConf sparkConf = new SparkConf();
+        sparkConf.setAppName("Workflow Throughput");
+        sparkConf.set("spark.cassandra.connection.host", "192.168.108.90");
+        sparkConf.set("spark.cassandra.auth.username", "cassandra");
+        sparkConf.set("spark.cassandra.auth.password", "cassandra");
 
-        JavaSparkContext sc = new JavaSparkContext(conf);
+        JavaSparkContext sparkContext = new JavaSparkContext(sparkConf);
 
-        Instant now = Instant.now().minus(5, ChronoUnit.MINUTES);
+        Instant last5Minutes = Instant.now().minus(5, ChronoUnit.MINUTES);
 
-        JavaPairRDD<Long, Long> pairs = javaFunctions(sc)
-            .cassandraTable("analytics", "analyticsevent")
-            .select("eventid", "eventproperties")
-            .where("eventid = ? and createdate > ?", "KALEO_INSTANCE_COMPLETE",
-                new Date().from(now))
-            .mapToPair(new PairFunction<CassandraRow, Long, Long>() {
+        JavaPairRDD<Long, Long> definitionDurationPair = javaFunctions(
+            sparkContext).cassandraTable("analytics", "analyticsevent")
+                .select("eventid", "eventproperties")
+                .where("eventid = ? and createdate > ?",
+                    "KALEO_INSTANCE_COMPLETE", new Date().from(last5Minutes))
+                .mapToPair(new PairFunction<CassandraRow, Long, Long>() {
 
-                @Override
-                public Tuple2<Long, Long> call(CassandraRow cassandraRow)
-                    throws Exception {
-                    Map<Object, Object> properties = cassandraRow
-                        .getMap("eventproperties");
-                    return new Tuple2<>(Long.valueOf(
-                        (String) properties.get("kaleoDefinitionVersionId")),
-                        Long.valueOf((String) properties.get("duration")));
-                }
-            });
-
-        Function<Long, AvgCount> createAcc = new Function<Long, AvgCount>() {
-            @Override
-            public AvgCount call(Long x) {
-                return new AvgCount(x, 1);
-            }
-        };
-
-        Function2<AvgCount, Long, AvgCount> addAndCount = new Function2<AvgCount, Long, AvgCount>() {
-            @Override
-            public AvgCount call(AvgCount a, Long x) {
-                a.totalduration += x;
-                a.total += 1;
-                return a;
-            }
-        };
-        Function2<AvgCount, AvgCount, AvgCount> combine = new Function2<AvgCount, AvgCount, AvgCount>() {
-            @Override
-            public AvgCount call(AvgCount a, AvgCount b) {
-                a.total += b.total;
-                a.totalduration += b.totalduration;
-                return a;
-            }
-        };
-
-        JavaRDD<Tuple3<Long, Long, Long>> cassandraRDDTuple = javaFunctions(sc)
-            .cassandraTable("analytics", "workflowprocessavg",
-                mapRowToTuple(Long.class, Long.class, Long.class))
-            .select("kaleodefinitionversionid", "total", "totalduration");
-
-        JavaPairRDD<Long, AvgCount> computationRDDPair = pairs
-            .combineByKey(createAcc, addAndCount, combine);
-
-        JavaPairRDD<Long, AvgCount> cassandraRDDPair = cassandraRDDTuple
-            .mapToPair(
-                new PairFunction<Tuple3<Long, Long, Long>, Long, AvgCount>() {
                     @Override
-                    public Tuple2<Long, AvgCount> call(
-                        Tuple3<Long, Long, Long> longLongLongTuple3)
+                    public Tuple2<Long, Long> call(CassandraRow cassandraRow)
                         throws Exception {
-                        AvgCount avgCount = new AvgCount(
-                            longLongLongTuple3._3(), longLongLongTuple3._2());
-
-                        return new Tuple2<>(longLongLongTuple3._1(), avgCount);
+                        Map<Object, Object> eventProperties = cassandraRow
+                            .getMap("eventproperties");
+                        return new Tuple2<>(
+                            Long.valueOf((String) eventProperties
+                                .get("kaleoDefinitionVersionId")),
+                            Long.valueOf(
+                                (String) eventProperties.get("duration")));
                     }
                 });
 
-        JavaRDD<Tuple3<Long, Long, Long>> computationRDDTuple = computationRDDPair
-            .map(
-                new Function<Tuple2<Long, AvgCount>, Tuple3<Long, Long, Long>>() {
-                    @Override
-                    public Tuple3<Long, Long, Long> call(
-                        Tuple2<Long, AvgCount> longAvgCountTuple2)
-                        throws Exception {
-                        return new Tuple3<>(longAvgCountTuple2._1(),
-                            longAvgCountTuple2._2().total,
-                            longAvgCountTuple2._2().totalduration);
-                    }
-                });
+        Function<Long, AvgCount> createCombiner = new Function<Long, AvgCount>() {
+            @Override
+            public AvgCount call(Long duration) {
+                return new AvgCount(duration, 1);
+            }
+        };
 
-        JavaRDD<Tuple3<Long, Long, Long>> finalTuple = computationRDDPair
-            .leftOuterJoin(cassandraRDDPair).mapValues(
+        Function2<AvgCount, Long, AvgCount> mergeValue = new Function2<AvgCount, Long, AvgCount>() {
+            @Override
+            public AvgCount call(AvgCount avgCount, Long duration) {
+                avgCount.totalduration += duration;
+                avgCount.total += 1;
+                return avgCount;
+            }
+        };
+        Function2<AvgCount, AvgCount, AvgCount> mergeCombiners = new Function2<AvgCount, AvgCount, AvgCount>() {
+            @Override
+            public AvgCount call(AvgCount avgCount1, AvgCount avgCount2) {
+                avgCount1.total += avgCount2.total;
+                avgCount1.totalduration += avgCount2.totalduration;
+                return avgCount1;
+            }
+        };
+
+        JavaPairRDD<Long, AvgCount> definitionAvgCountNewPair = definitionDurationPair
+            .combineByKey(createCombiner, mergeValue, mergeCombiners);
+
+        JavaPairRDD<Long, AvgCount> definitionAvgCountExistPair = javaFunctions(
+            sparkContext)
+                .cassandraTable("analytics", "workflowprocessavg",
+                    mapRowToTuple(Long.class, Long.class, Long.class))
+                .select("kaleodefinitionversionid", "total", "totalduration")
+                .mapToPair(
+                    new PairFunction<Tuple3<Long, Long, Long>, Long, AvgCount>() {
+                        @Override
+                        public Tuple2<Long, AvgCount> call(
+                            Tuple3<Long, Long, Long> longLongLongTuple3)
+                            throws Exception {
+                            AvgCount avgCount = new AvgCount(
+                                longLongLongTuple3._3(),
+                                longLongLongTuple3._2());
+
+                            return new Tuple2<>(longLongLongTuple3._1(),
+                                avgCount);
+                        }
+                    });
+
+        JavaRDD<Tuple3<Long, Long, Long>> workflowProcessAvgTuple3 = definitionAvgCountNewPair
+            .leftOuterJoin(definitionAvgCountExistPair).mapValues(
                 new Function<Tuple2<AvgCount, Optional<AvgCount>>, AvgCount>() {
 
                     @Override
                     public AvgCount call(
                         Tuple2<AvgCount, Optional<AvgCount>> avgCountOptionalTuple2)
                         throws Exception {
-                        AvgCount count1 = avgCountOptionalTuple2._1();
-                        Optional<AvgCount> count2 = avgCountOptionalTuple2._2();
+                        AvgCount avgCount = avgCountOptionalTuple2._1();
+                        Optional<AvgCount> avgCountOptional = avgCountOptionalTuple2
+                            ._2();
 
-                        if (count2.isPresent()) {
-                            count1.total += count2.get().total;
-                            count1.totalduration += count2.get().totalduration;
+                        if (avgCountOptional.isPresent()) {
+                            avgCount.total += avgCountOptional.get().total;
+                            avgCount.totalduration += avgCountOptional
+                                .get().totalduration;
                         }
 
-                        return count1;
+                        return avgCount;
                     }
                 })
             .map(
@@ -155,7 +147,7 @@ public class Main {
                     }
                 });
 
-        javaFunctions(finalTuple)
+        javaFunctions(workflowProcessAvgTuple3)
             .writerBuilder("analytics", "workflowprocessavg",
                 mapTupleToRow(Long.class, Long.class, Long.class))
             .withColumnSelector(someColumns("kaleodefinitionversionid", "total",
