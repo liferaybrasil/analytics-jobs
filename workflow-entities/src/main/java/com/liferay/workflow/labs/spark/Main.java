@@ -26,19 +26,36 @@ public class Main {
 			.config("spark.cassandra.auth.username", "cassandra")
 			.config("spark.cassandra.auth.password", "cassandra").getOrCreate();
 
-		Dataset<Row> analyticsEventDataSet = spark.read()
+		Dataset<Row> analyticsEventDataSet1 = spark.read()
 			.format("org.apache.spark.sql.cassandra")
 			.options(_analyticsEventOptions).load();
 
-		analyticsEventDataSet = analyticsEventDataSet.filter("eventid = '"
-			+ _eventId + "' and createdate > '" + _last5Minutes + "'");
+		analyticsEventDataSet1 = analyticsEventDataSet1.filter("eventid = '"
+			+ _eventId1 + "' and createdate > '" + _last5Minutes + "'");
 
-		analyticsEventDataSet = analyticsEventDataSet
+		analyticsEventDataSet1 = analyticsEventDataSet1
 			.select(col("eventproperties").getField("kaleoDefinitionVersionId")
 				.as("id"), col("eventproperties").getField("name").as("name"));
 
-		analyticsEventDataSet = analyticsEventDataSet.withColumn("entity",
+		analyticsEventDataSet1 = analyticsEventDataSet1.withColumn("entity",
 			lit("KALEO_DEFINITION_VERSION"));
+
+		Dataset<Row> analyticsEventDataSet2 = spark.read()
+			.format("org.apache.spark.sql.cassandra")
+			.options(_analyticsEventOptions).load();
+
+		analyticsEventDataSet2 = analyticsEventDataSet2.filter("eventid = '"
+			+ _eventId2 + "' and createdate > '" + _last5Minutes + "'");
+
+		analyticsEventDataSet2 = analyticsEventDataSet2
+			.select(col("eventproperties").getField("kaleoDefinitionVersionId")
+				.as("id"), col("eventproperties").getField("name").as("name"));
+
+		analyticsEventDataSet2 = analyticsEventDataSet2.withColumn("entity",
+			lit("KALEO_TASK"));
+
+		Dataset<Row> analyticsEventDataSet = analyticsEventDataSet1
+			.union(analyticsEventDataSet2);
 
 		analyticsEventDataSet.write().format("org.apache.spark.sql.cassandra")
 			.options(_workflowEntitiesOptions).mode(SaveMode.Append).save();
@@ -53,7 +70,8 @@ public class Main {
 		}
 	};
 
-	private static final String _eventId = "KALEO_DEFINITION_VERSION_CREATE";
+	private static final String _eventId1 = "KALEO_DEFINITION_VERSION_CREATE";
+	private static final String _eventId2 = "KALEO_TASK_CREATE";
 
 	private static final Date _last5Minutes = Date
 		.from(Instant.now().minus(5, ChronoUnit.MINUTES));
