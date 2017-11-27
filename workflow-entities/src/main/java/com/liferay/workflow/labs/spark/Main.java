@@ -14,6 +14,9 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
 
+/**
+ * @author Inácio Nery
+ */
 public class Main {
 
 	public static void main(String[] args) {

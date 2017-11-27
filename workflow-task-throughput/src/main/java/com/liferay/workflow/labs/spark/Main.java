@@ -15,6 +15,9 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
 
+/**
+ * @author Inácio Nery
+ */
 public class Main {
 
 	public static void main(String[] args) {
@@ -32,49 +35,33 @@ public class Main {
 			.format("org.apache.spark.sql.cassandra")
 			.options(_workflowTaskAvgOptions).load();
 
-		Dataset<Row> analyticsEventDataSet1 = spark.read()
+		Dataset<Row> analyticsEventDataSet = spark.read()
 			.format("org.apache.spark.sql.cassandra")
 			.options(_analyticsEventOptions).load();
 
-		analyticsEventDataSet1 = analyticsEventDataSet1.filter("eventid = '"
-			+ _eventId1 + "' and createdate > '" + _last5Minutes + "'");
-
-		Dataset<Row> analyticsEventDataSet2 = spark.read()
-			.format("org.apache.spark.sql.cassandra")
-			.options(_analyticsEventOptions).load();
-
-		analyticsEventDataSet2 = analyticsEventDataSet2.filter("eventid = '"
-			+ _eventId2 + "' and createdate > '" + _last5Minutes + "'");
-
-		Dataset<Row> analyticsEventDataSet = analyticsEventDataSet1
-			.union(analyticsEventDataSet2);
+		analyticsEventDataSet = analyticsEventDataSet.filter("eventid = '"
+			+ _eventId + "' and createdate > '" + _last5Minutes + "'");
 
 		analyticsEventDataSet = analyticsEventDataSet.select(
 			col("eventproperties").getField("kaleoDefinitionVersionId")
 				.as("kaleodefinitionversionid"),
 			col("eventproperties").getField("kaleoTaskId").as("kaleotaskid"),
-			col("eventproperties").getField("duration").as("totalduration"),
-			col("eventproperties").getField("assigneeClassName")
-				.as("classname"),
-			col("eventproperties").getField("assigneeClassPK").as("classpk"));
+			col("eventproperties").getField("duration").as("totalduration"));
 
 		analyticsEventDataSet = analyticsEventDataSet.withColumn("total",
 			lit(1));
 
-		analyticsEventDataSet = analyticsEventDataSet.select(
-			"kaleodefinitionversionid", "kaleotaskid", "classname", "classpk",
-			"total", "totalduration");
+		analyticsEventDataSet = analyticsEventDataSet.select("kaleotaskid",
+			"kaleodefinitionversionid", "total", "totalduration");
 
-		workflowTaskAvgDataSet = workflowTaskAvgDataSet.select(
-			"kaleodefinitionversionid", "kaleotaskid", "classname", "classpk",
-			"total", "totalduration");
+		workflowTaskAvgDataSet = workflowTaskAvgDataSet.select("kaleotaskid",
+			"kaleodefinitionversionid", "total", "totalduration");
 
 		workflowTaskAvgDataSet = workflowTaskAvgDataSet
 			.union(analyticsEventDataSet);
 
 		workflowTaskAvgDataSet = workflowTaskAvgDataSet
-			.groupBy("kaleodefinitionversionid", "kaleotaskid", "classname",
-				"classpk")
+			.groupBy("kaleotaskid", "kaleodefinitionversionid")
 			.agg(sum("totalduration").as("totalduration"),
 				sum("total").as("total"));
 
@@ -91,9 +78,7 @@ public class Main {
 		}
 	};
 
-	private static final String _eventId1 = "KALEO_TASK_ASSIGNMENT_INSTANCE_COMPLETE";
-
-	private static final String _eventId2 = "KALEO_TASK_ASSIGNMENT_INSTANCE_DELETE";
+	private static final String _eventId = "KALEO_TASK_INSTANCE_TOKEN_COMPLETE";
 
 	private static final Date _last5Minutes = Date
 		.from(Instant.now().minus(5, ChronoUnit.MINUTES));
