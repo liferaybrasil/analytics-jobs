@@ -50,9 +50,9 @@ public class Main {
 		analyticsEventDataSet2 = analyticsEventDataSet2.filter("eventid = '"
 			+ _eventId2 + "' and createdate > '" + _last5Minutes + "'");
 
-		analyticsEventDataSet2 = analyticsEventDataSet2
-			.select(col("eventproperties").getField("kaleoDefinitionVersionId")
-				.as("id"), col("eventproperties").getField("name").as("name"));
+		analyticsEventDataSet2 = analyticsEventDataSet2.select(
+			col("eventproperties").getField("kaleoTaskId").as("id"),
+			col("eventproperties").getField("name").as("name"));
 
 		analyticsEventDataSet2 = analyticsEventDataSet2.withColumn("entity",
 			lit("KALEO_TASK"));
