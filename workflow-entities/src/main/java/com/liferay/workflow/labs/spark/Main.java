@@ -3,9 +3,7 @@ package com.liferay.workflow.labs.spark;
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.lit;
 
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.Date;
+import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -76,8 +74,8 @@ public class Main {
 	private static final String _eventId1 = "KALEO_DEFINITION_VERSION_CREATE";
 	private static final String _eventId2 = "KALEO_TASK_CREATE";
 
-	private static final Date _last5Minutes = Date
-		.from(Instant.now().minus(5, ChronoUnit.MINUTES));
+	private static final String _last5Minutes = OffsetDateTime.now()
+		.minusMinutes(5).toString();
 
 	private static final Map<String, String> _workflowEntitiesOptions = new HashMap<String, String>() {
 		{
