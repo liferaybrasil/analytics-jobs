@@ -1,3 +1,4 @@
+
 package com.liferay.workflow.labs.spark;
 
 import static org.apache.spark.sql.functions.col;
@@ -19,72 +20,80 @@ import org.apache.spark.sql.SparkSession;
 public class Main {
 
 	public static void main(String[] args) {
+
 		doRun();
 	}
 
 	protected static void doRun() {
-		SparkSession spark = SparkSession.builder()
-			.appName("Workflow Throughput")
-			.config("spark.cassandra.connection.host", "192.168.108.90")
-			.config("spark.cassandra.auth.username", "cassandra")
-			.config("spark.cassandra.auth.password", "cassandra").getOrCreate();
 
-		Dataset<Row> workflowProcessAvgDataSet = spark.read()
-			.format("org.apache.spark.sql.cassandra")
-			.options(_workflowProcessAvgOptions).load();
+		SparkSession spark =
+			SparkSession.builder().appName("Workflow Throughput").config(
+				"spark.cassandra.connection.host", "192.168.108.90").config(
+					"spark.cassandra.auth.username", "cassandra").config(
+						"spark.cassandra.auth.password",
+						"cassandra").getOrCreate();
 
-		Dataset<Row> analyticsEventDataSet = spark.read()
-			.format("org.apache.spark.sql.cassandra")
-			.options(_analyticsEventOptions).load();
+		Dataset<Row> workflowProcessAvgDataSet =
+			spark.read().format("org.apache.spark.sql.cassandra").options(
+				_workflowProcessAvgOptions).load();
 
-		analyticsEventDataSet = analyticsEventDataSet.filter("eventid = '"
-			+ _eventId + "' and createdate > '" + _last5Minutes + "'");
+		Dataset<Row> analyticsEventDataSet =
+			spark.read().format("org.apache.spark.sql.cassandra").options(
+				_analyticsEventOptions).load();
+
+		analyticsEventDataSet = analyticsEventDataSet.filter(
+			"eventid = '" + _eventId + "' and createdate > '" + _last5Minutes +
+				"'");
 
 		analyticsEventDataSet = analyticsEventDataSet.select(
-			col("eventproperties").getField("kaleoDefinitionVersionId")
-				.as("kaleodefinitionversionid"),
+			col("eventproperties").getField("kaleoDefinitionVersionId").as(
+				"kaleodefinitionversionid"),
 			col("eventproperties").getField("duration").as("totalduration"));
 
-		analyticsEventDataSet = analyticsEventDataSet.withColumn("total",
-			lit(1));
+		analyticsEventDataSet =
+			analyticsEventDataSet.withColumn("total", lit(1));
 
-		analyticsEventDataSet = analyticsEventDataSet
-			.select("kaleodefinitionversionid", "total", "totalduration");
+		analyticsEventDataSet = analyticsEventDataSet.select(
+			"kaleodefinitionversionid", "total", "totalduration");
 
-		workflowProcessAvgDataSet = workflowProcessAvgDataSet
-			.select("kaleodefinitionversionid", "total", "totalduration");
+		workflowProcessAvgDataSet = workflowProcessAvgDataSet.select(
+			"kaleodefinitionversionid", "total", "totalduration");
 
-		workflowProcessAvgDataSet = workflowProcessAvgDataSet
-			.union(analyticsEventDataSet);
+		workflowProcessAvgDataSet =
+			workflowProcessAvgDataSet.union(analyticsEventDataSet);
 
-		workflowProcessAvgDataSet = workflowProcessAvgDataSet
-			.groupBy(col("kaleodefinitionversionid"))
-			.agg(sum("totalduration").as("totalduration"),
+		workflowProcessAvgDataSet = workflowProcessAvgDataSet.groupBy(
+			col("kaleodefinitionversionid")).agg(
+				sum("totalduration").as("totalduration"),
 				sum("total").as("total"));
 
-		workflowProcessAvgDataSet.write()
-			.format("org.apache.spark.sql.cassandra")
-			.options(_workflowProcessAvgOptions).mode(SaveMode.Append).save();
+		workflowProcessAvgDataSet.write().format(
+			"org.apache.spark.sql.cassandra").options(
+				_workflowProcessAvgOptions).mode(SaveMode.Append).save();
 
 		spark.stop();
 	}
 
-	private static final Map<String, String> _analyticsEventOptions = new HashMap<String, String>() {
-		{
-			put("keyspace", "analytics");
-			put("table", "analyticsevent");
-		}
-	};
+	private static final Map<String, String> _analyticsEventOptions =
+		new HashMap<String, String>() {
+
+			{
+				put("keyspace", "analytics");
+				put("table", "analyticsevent");
+			}
+		};
 
 	private static final String _eventId = "KALEO_INSTANCE_COMPLETE";
 
-	private static final String _last5Minutes = OffsetDateTime.now()
-		.minusMinutes(5).toString();
+	private static final String _last5Minutes =
+		OffsetDateTime.now().minusMinutes(5).toString();
 
-	private static final Map<String, String> _workflowProcessAvgOptions = new HashMap<String, String>() {
-		{
-			put("keyspace", "analytics");
-			put("table", "workflowprocessavg");
-		}
-	};
+	private static final Map<String, String> _workflowProcessAvgOptions =
+		new HashMap<String, String>() {
+
+			{
+				put("keyspace", "analytics");
+				put("table", "workflowprocessavg");
+			}
+		};
 }
