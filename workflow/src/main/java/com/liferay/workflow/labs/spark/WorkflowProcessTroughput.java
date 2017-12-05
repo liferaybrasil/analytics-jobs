@@ -35,10 +35,10 @@ public class WorkflowProcessTroughput {
 		Dataset<Row> workflowProcessAvgExistDataSet) {
 
 		Dataset<Row> workflowProcessAvgNewDataSet =
-			kaleoInstanceComplete(analyticsEventDataSet);
+			kaleoInstanceCreate(analyticsEventDataSet);
 
 		workflowProcessAvgNewDataSet =
-			kaleoInstanceCreate(analyticsEventDataSet).union(
+			kaleoInstanceComplete(analyticsEventDataSet).union(
 				workflowProcessAvgNewDataSet);
 
 		workflowProcessAvgNewDataSet =

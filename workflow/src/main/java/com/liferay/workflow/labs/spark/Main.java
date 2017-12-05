@@ -47,6 +47,9 @@ public class Main {
 			date_format(col("createdate"), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX").geq(
 				_last5Minutes));
 
+		analyticsEventDataSet = analyticsEventDataSet.filter(
+			"applicationid = '" + _applicationId + "'");
+
 		Dataset<Row> workflowProcessAvgExistDataSet =
 			spark.read().format("org.apache.spark.sql.cassandra").options(
 				_workflowProcessAvgOptions).load();
@@ -63,17 +66,35 @@ public class Main {
 
 		WorkflowEntities.doRun(analyticsEventDataSet);
 
+		Dataset<Row> workflowsExistDataSet =
+			spark.read().format("org.apache.spark.sql.cassandra").options(
+				_workflowsOptions).load();
+
+		Workflows.doRun(analyticsEventDataSet, workflowsExistDataSet);
+
 		spark.stop();
 	}
-	private final static String _last5Minutes =
-		OffsetDateTime.now().minusMinutes(5).toString();
-
 	private static final Map<String, String> _analyticsEventOptions =
 		new HashMap<String, String>() {
 
 			{
 				put("keyspace", "analytics");
 				put("table", "analyticsevent");
+			}
+		};
+
+	private static final String _applicationId =
+		"com.liferay.portal.workflow.analytics:1.0.0";
+
+	private final static String _last5Minutes =
+		OffsetDateTime.now().minusMinutes(5).toString();
+
+	private static final Map<String, String> _workflowsOptions =
+		new HashMap<String, String>() {
+
+			{
+				put("keyspace", "analytics");
+				put("table", "workflows");
 			}
 		};
 

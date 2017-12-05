@@ -24,10 +24,21 @@ CREATE TABLE Analytics.WorkflowTaskAvg (
  	date DATE,
  	analyticskey VARCHAR, 
     taskid bigint,
-    processversionid bigint,    
+    processid bigint,    
     totalduration bigint,
     total bigint,
-    PRIMARY KEY(date, analyticskey, taskid, processversionid)
+    PRIMARY KEY(date, analyticskey, taskid, processid)
+)
+WITH compaction = {'class': 'DateTieredCompactionStrategy'}
+AND default_time_to_live = 7776000;
+
+CREATE TABLE Analytics.Workflows (
+    processid bigint,
+ 	analyticskey VARCHAR, 
+    deleted boolean,
+    active boolean,
+    title TEXT,
+    PRIMARY KEY(processid, analyticskey)
 )
 WITH compaction = {'class': 'DateTieredCompactionStrategy'}
 AND default_time_to_live = 7776000;
