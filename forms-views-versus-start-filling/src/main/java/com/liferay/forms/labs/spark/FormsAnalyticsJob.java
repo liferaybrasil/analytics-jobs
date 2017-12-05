@@ -60,13 +60,16 @@ public class FormsAnalyticsJob {
 
 		Dataset<Row> analyticsEventOld = getDataset(sparkSession, referenceDate, true);
 
-		runViews(sparkSession, analyticsEventOld, referenceDate);
-		runSessions(sparkSession, referenceDate);
+		unionAndSaveAggregatedDataset(
+			sparkSession, 
+			runViews(sparkSession, analyticsEventOld, referenceDate),
+			runSessions(sparkSession, referenceDate)
+		);
 
 		sparkSession.stop();
 	}
-	
-	protected static void runSessions(
+
+	protected static Dataset<Row> runSessions(
 		SparkSession sparkSession, OffsetDateTime referenceDate) {
 		
 		Dataset<Row> analyticsEventNew = getDataset(sparkSession, referenceDate, false);
@@ -96,11 +99,11 @@ public class FormsAnalyticsJob {
 		).select(
 			getFormsAggregatedDataColumns()
 		);
-		
-		unionAndSaveAggregatedDataset(sparkSession, dataset);
+
+		return dataset;
 	}
 
-	protected static void runViews(
+	protected static Dataset<Row> runViews(
 		SparkSession sparkSession, Dataset<Row> analyticsEventOld, OffsetDateTime referenceDate) {
 
 		Dataset<Row> analyticsEventNew = getDataset(sparkSession, referenceDate, false);
@@ -165,17 +168,20 @@ public class FormsAnalyticsJob {
 		).select(
 			getFormsAggregatedDataColumns()
 		);
-		
-		unionAndSaveAggregatedDataset(sparkSession, dataset);
+
+		return dataset;
 	}
-	
+
+	@SafeVarargs
 	protected static void unionAndSaveAggregatedDataset(
-		SparkSession sparkSession, Dataset<Row> dataset) {
+		SparkSession sparkSession, Dataset<Row>...datasets) {
 
 		Dataset<Row> loadedDataset = loadAggregatedDataset(sparkSession);
-		
-		loadedDataset = loadedDataset.union(dataset);
-		
+
+		for (Dataset<Row> dataset: datasets) {
+			loadedDataset = loadedDataset.union(dataset);
+		}
+
 		Dataset<Row> datasetToSave = loadedDataset.groupBy(
 			"analyticskey", "formid", "date"
 		).agg(
@@ -186,9 +192,9 @@ public class FormsAnalyticsJob {
 			sum("convertedtotaltime").as("convertedtotaltime"),
 			sum("dropoffs").as("dropoffs")
 		);
-		
+
 		datasetToSave.show();
-		
+
 		saveFormsAggregatedData(datasetToSave);
 	}
 	
