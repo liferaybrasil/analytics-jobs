@@ -14,6 +14,9 @@
 
 package com.liferay.workflow.labs.spark;
 
+import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.date_format;
+
 import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -41,7 +44,8 @@ public class Main {
 				_analyticsEventOptions).load();
 
 		analyticsEventDataSet = analyticsEventDataSet.filter(
-			"createdate > '" + _last5Minutes + "'");
+			date_format(col("createdate"), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX").geq(
+				_last5Minutes));
 
 		Dataset<Row> workflowProcessAvgExistDataSet =
 			spark.read().format("org.apache.spark.sql.cassandra").options(
