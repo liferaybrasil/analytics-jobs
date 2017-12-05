@@ -1,5 +1,5 @@
 {
 	"class" : "com.liferay.workflow.labs.spark.Main",
 	"cron"  : "*/5 * * * *",
-	"path"  : "target/workflow-entities.jar"
+	"path"  : "target/workflow.jar"
 }

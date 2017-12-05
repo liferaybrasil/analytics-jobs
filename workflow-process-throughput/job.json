@@ -1,5 +1,0 @@
-{
-	"class" : "com.liferay.workflow.labs.spark.Main",
-	"cron"  : "*/5 * * * *",
-	"path"  : "target/workflow-process-throughtput.jar"
-}
