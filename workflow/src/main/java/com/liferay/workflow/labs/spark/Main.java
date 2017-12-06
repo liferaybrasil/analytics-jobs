@@ -54,7 +54,7 @@ public class Main {
 			spark.read().format("org.apache.spark.sql.cassandra").options(
 				_workflowProcessAvgOptions).load();
 
-		WorkflowProcessTroughput.doRun(
+		WorkflowProcessAvg.doRun(
 			analyticsEventDataSet, workflowProcessAvgExistDataSet);
 
 		Dataset<Row> workflowTaskAvgExistDataSet =

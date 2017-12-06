@@ -1,12 +1,13 @@
 CREATE TABLE Analytics.WorkflowProcessAvg (
     date DATE,
 	analyticskey VARCHAR, 
+	processid BIGINT,
     processversionid BIGINT,
     total BIGINT,
     totalcompleted BIGINT,
     totalremoved BIGINT,
     totalduration BIGINT,
-    PRIMARY KEY(date, analyticskey, processversionid)
+    PRIMARY KEY(date, analyticskey, processid, processversionid)
 )
 WITH compaction = {'class': 'DateTieredCompactionStrategy'}
 AND default_time_to_live = 7776000;

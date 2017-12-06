@@ -28,7 +28,7 @@ import org.apache.spark.sql.SaveMode;
 /**
  * @author Inácio Nery
  */
-public class WorkflowProcessTroughput {
+public class WorkflowProcessAvg {
 
 	public static void doRun(
 		Dataset<Row> analyticsEventDataSet,
@@ -71,14 +71,14 @@ public class WorkflowProcessTroughput {
 				workflowProcessAvgNewDataSet.select("date").columns()));
 
 		workflowProcessAvgExistDataSet = workflowProcessAvgExistDataSet.select(
-			"date", "analyticskey", "processversionid", "total",
+			"date", "analyticskey", "processid", "processversionid", "total",
 			"totalcompleted", "totalduration", "totalremoved");
 
 		workflowProcessAvgNewDataSet =
 			workflowProcessAvgNewDataSet.union(workflowProcessAvgExistDataSet);
 
 		return workflowProcessAvgNewDataSet.groupBy(
-			"date", "analyticskey", "processversionid").agg(
+			"date", "analyticskey", "processid", "processversionid").agg(
 				sum("total").as("total"),
 				sum("totalcompleted").as("totalcompleted"),
 				sum("totalremoved").as("totalremoved"),
@@ -94,6 +94,8 @@ public class WorkflowProcessTroughput {
 		analyticsEventDataSet = analyticsEventDataSet.select(
 			col("eventproperties").getField("date").cast("date").as("date"),
 			col("analyticskey"),
+			col("eventproperties").getField("kaleoDefinitionId").as(
+				"processid"),
 			col("eventproperties").getField("kaleoDefinitionVersionId").as(
 				"processversionid"),
 			col("eventproperties").getField("duration").as("totalduration"));
@@ -103,7 +105,7 @@ public class WorkflowProcessTroughput {
 				"totalremoved", lit(0)).withColumn("total", lit(0));
 
 		return analyticsEventDataSet.select(
-			"date", "analyticskey", "processversionid", "total",
+			"date", "analyticskey", "processid", "processversionid", "total",
 			"totalcompleted", "totalduration", "totalremoved");
 	}
 
@@ -116,6 +118,8 @@ public class WorkflowProcessTroughput {
 		analyticsEventDataSet = analyticsEventDataSet.select(
 			col("eventproperties").getField("date").cast("date").as("date"),
 			col("analyticskey"),
+			col("eventproperties").getField("kaleoDefinitionId").as(
+				"processid"),
 			col("eventproperties").getField("kaleoDefinitionVersionId").as(
 				"processversionid"));
 
@@ -125,7 +129,7 @@ public class WorkflowProcessTroughput {
 					"totalremoved", lit(0)).withColumn("total", lit(1));
 
 		return analyticsEventDataSet.select(
-			"date", "analyticskey", "processversionid", "total",
+			"date", "analyticskey", "processid", "processversionid", "total",
 			"totalcompleted", "totalduration", "totalremoved");
 	}
 
@@ -138,6 +142,8 @@ public class WorkflowProcessTroughput {
 		analyticsEventDataSet = analyticsEventDataSet.select(
 			col("eventproperties").getField("date").cast("date").as("date"),
 			col("analyticskey"),
+			col("eventproperties").getField("kaleoDefinitionId").as(
+				"processid"),
 			col("eventproperties").getField("kaleoDefinitionVersionId").as(
 				"processversionid"));
 
@@ -147,7 +153,7 @@ public class WorkflowProcessTroughput {
 					"totalremoved", lit(1)).withColumn("total", lit(0));
 
 		return analyticsEventDataSet.select(
-			"date", "analyticskey", "processversionid", "total",
+			"date", "analyticskey", "processid", "processversionid", "total",
 			"totalcompleted", "totalduration", "totalremoved");
 	}
 
