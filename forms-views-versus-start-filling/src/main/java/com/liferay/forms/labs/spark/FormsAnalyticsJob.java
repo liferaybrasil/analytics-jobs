@@ -62,8 +62,9 @@ public class FormsAnalyticsJob {
 
 		unionAndSaveAggregatedDataset(
 			sparkSession, 
-			runViews(sparkSession, analyticsEventOld, referenceDate),
-			runSessions(sparkSession, referenceDate)
+			runConverted(sparkSession, referenceDate),
+			runSessions(sparkSession, referenceDate),
+			runViews(sparkSession, analyticsEventOld, referenceDate)
 		);
 
 		sparkSession.stop();
@@ -92,6 +93,41 @@ public class FormsAnalyticsJob {
 			"started", lit(0)
 		).withColumn(
 			"converted", lit(0)
+		).withColumn(
+			"convertedtotaltime", lit(0)
+		).withColumn(
+			"dropoffs", lit(0)
+		).select(
+			getFormsAggregatedDataColumns()
+		);
+
+		return dataset;
+	}
+
+	protected static Dataset<Row> runConverted(
+		SparkSession sparkSession, OffsetDateTime referenceDate) {
+
+		Dataset<Row> analyticsEventNew =
+			getDataset(sparkSession, referenceDate, false);
+
+		analyticsEventNew = analyticsEventNew.filter("eventid = 'FORM_SUBMIT'");
+
+		Dataset<Row> dataset = analyticsEventNew.select(
+			col("analyticsKey").as("analyticskey"), 
+			col("eventproperties").getField("formId").as("formid"), 
+			col("createdate").cast("date").as("date")
+		).withColumn(
+			"converted", lit(1)
+		).groupBy(
+			"analyticskey", "formid", "date"
+		).agg(
+			sum("converted").as("converted")
+		).withColumn(
+			"views", lit(0)
+		).withColumn(
+			"started", lit(0)
+		).withColumn(
+			"sessions", lit(0)
 		).withColumn(
 			"convertedtotaltime", lit(0)
 		).withColumn(
