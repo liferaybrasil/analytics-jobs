@@ -17,6 +17,7 @@ package com.liferay.forms.labs.spark;
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.sum;
+import static org.apache.spark.sql.functions.min;
 
 import java.time.OffsetDateTime;
 import java.util.Map;
@@ -158,24 +159,36 @@ public class FormsAnalyticsJob {
 
 		Dataset<FormEvent> viewDataset = analyticsEventNew.joinWith(
 			analyticsEventOld, 
-			formIdColumn.and(userIdColumn).and(eventColumn), "left_outer").filter(
-				tuple -> (tuple._1.getString(4).equals("FORM_VIEW") || 
-							tuple._1.getString(4).equals("FIELD_STARTED_FILLING")) && tuple._2 == null).map(
-					func -> {
-						Map<Object, Object> properties = func._1.getJavaMap(7);
+			formIdColumn.and(userIdColumn).and(eventColumn),
+			"left_outer"
+		).filter(
+			tuple -> {
+				String eventId = tuple._1.getString(4);
 
-						return new FormEvent(
-							Long.parseLong(properties.get("userId").toString()),
-							Long.parseLong(properties.get("formId").toString()),
-							func._1.getString(4), func._1.getTimestamp(1), 
-							func._1.getString(3));
-					}, 
-					Encoders.bean(FormEvent.class)
-				);
+				return (eventId.equals("FORM_VIEW") || 
+						eventId.equals("FIELD_STARTED_FILLING"))
+							&& tuple._2 == null;
+			}
+		).map(
+			tuple -> {
+				Map<Object, Object> properties = tuple._1.getJavaMap(7);
 
-		viewDataset = viewDataset.dropDuplicates("userId", "formId", "event");
+				return new FormEvent(
+					Long.parseLong(properties.get("userId").toString()),
+					Long.parseLong(properties.get("formId").toString()),
+					tuple._1.getString(4), tuple._1.getTimestamp(1), 
+					tuple._1.getString(3));
+			}, 
+			Encoders.bean(FormEvent.class)
+		);
 
-		Dataset<Row> viewDatasetGrouped = viewDataset.select(
+		Dataset<Row> viewDatasetGrouped = viewDataset.groupBy(
+			"analyticsKey", "userId", "formId", "event"
+		).agg(
+			min("date").as("date")
+		);
+
+		viewDatasetGrouped = viewDatasetGrouped.select(
 			col("analyticsKey").as("analyticskey"), 
 			col("formId").as("formid"), 
 			col("event"), 
@@ -188,9 +201,11 @@ public class FormsAnalyticsJob {
 			sum("total").as("total")
 		);
 
-		Dataset<Row> dataset = viewDatasetGrouped.map(row -> {
+		Dataset<Row> dataset = viewDatasetGrouped.map(
+			row -> {
 				FormsAggregatedData formsAggregatedData = 
-					new FormsAggregatedData(row.getString(0), row.getLong(1), row.getDate(2));
+					new FormsAggregatedData(
+						row.getString(0), row.getLong(1), row.getDate(2));
 	
 				if(row.getString(3).equals("FORM_VIEW")) {
 					formsAggregatedData.setViews(row.getLong(4));
@@ -200,7 +215,8 @@ public class FormsAnalyticsJob {
 				}
 	
 				return formsAggregatedData;
-			}, Encoders.bean(FormsAggregatedData.class)
+			},
+			Encoders.bean(FormsAggregatedData.class)
 		).select(
 			getFormsAggregatedDataColumns()
 		);
