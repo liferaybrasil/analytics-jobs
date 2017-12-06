@@ -28,7 +28,7 @@ import org.apache.spark.sql.SaveMode;
 /**
  * @author Inácio Nery
  */
-public class WorkflowTaskTroughput {
+public class WorkflowTaskAvg {
 
 	public static void doRun(
 		Dataset<Row> analyticsEventDataSet,
