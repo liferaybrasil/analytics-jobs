@@ -12,6 +12,9 @@ CREATE TABLE Analytics.WorkflowProcessAvg (
 WITH compaction = {'class': 'DateTieredCompactionStrategy'}
 AND default_time_to_live = 7776000;
 
+CREATE INDEX workflowprocessavg_processid
+   ON Analytics.WorkflowProcessAvg (processid);
+
 CREATE TABLE Analytics.WorkflowEntities (
     entity TEXT,
     id bigint,
@@ -43,3 +46,6 @@ CREATE TABLE Analytics.Workflows (
 )
 WITH compaction = {'class': 'DateTieredCompactionStrategy'}
 AND default_time_to_live = 7776000;
+
+CREATE INDEX workflows_deleted
+   ON Analytics.Workflows (deleted);
