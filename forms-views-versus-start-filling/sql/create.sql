@@ -1,14 +1,15 @@
 CREATE TABLE Analytics.FormsAggregatedData (
-	analyticsKey text,
-	formId bigint,
-	date timestamp,
+	analyticskey text,
+	formid bigint,
+	date date,
 	views bigint,
 	sessions bigint,
 	started bigint,
 	converted bigint,
-	convertedTotalTime bigint,
+	convertedtotaltime bigint,
 	dropoffs bigint,
-	PRIMARY KEY(analyticsKey, formId, date)
+	PRIMARY KEY(analyticskey, formid, date)
 )
-WITH compaction = {'class': 'DateTieredCompactionStrategy'}
+WITH CLUSTERING ORDER BY (formid ASC, date ASC)
+AND compaction = {'class': 'DateTieredCompactionStrategy'}
 AND default_time_to_live = 7776000;
