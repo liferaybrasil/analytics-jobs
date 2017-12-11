@@ -2,9 +2,9 @@ package com.liferay.forms.labs.spark;
 
 import java.sql.Timestamp;
 
-public class ViewsStartedBean {
+public class FormsViewsStartedBean {
 
-	public ViewsStartedBean(long userId, long formId, String event, Timestamp date, String analyticsKey) {
+	public FormsViewsStartedBean(long userId, long formId, String event, Timestamp date, String analyticsKey) {
 		this.userId = userId;
 		this.formId = formId;
 		this.event = event;
