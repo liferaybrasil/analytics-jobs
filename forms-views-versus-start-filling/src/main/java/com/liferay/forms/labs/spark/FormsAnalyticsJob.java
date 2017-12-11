@@ -16,9 +16,10 @@ package com.liferay.forms.labs.spark;
 
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.date_format;
+import static org.apache.spark.sql.functions.date_add;
 import static org.apache.spark.sql.functions.lit;
-import static org.apache.spark.sql.functions.min;
 import static org.apache.spark.sql.functions.max;
+import static org.apache.spark.sql.functions.min;
 import static org.apache.spark.sql.functions.sum;
 import static org.apache.spark.sql.functions.unix_timestamp;
 
@@ -68,6 +69,7 @@ public class FormsAnalyticsJob {
 			sparkSession, 
 			runConverted(sparkSession, referenceDate),
 			runConvertedTime(sparkSession, referenceDate),
+			runDropoffs(sparkSession, referenceDate),
 			runSessions(sparkSession, referenceDate),
 			runViewsStarted(sparkSession, analyticsEventOld, referenceDate)
 		);
@@ -75,11 +77,103 @@ public class FormsAnalyticsJob {
 		sparkSession.stop();
 	}
 
+	protected static Dataset<Row> runDropoffs(
+		SparkSession sparkSession, OffsetDateTime referenceDate) {
+
+		Dataset<Row> analyticsEvents = loadDataset(sparkSession);
+
+		Dataset<Row> analyticsEvents1 = analyticsEvents.filter(
+			date_format(col("createdate"), "yyyy-MM-dd").leq(referenceDate.minusDays(1).toString()).
+			and(col("applicationid").equalTo("com.liferay.dynamic.data.mapping.forms.analytics:1.0.0"))
+		).select(
+			col("analyticskey").as("analyticskey1"),
+			col("eventproperties").getField("formId").as("formid1"),
+			col("eventproperties").getField("userId").as("userid1"),
+			col("createdate").cast("date").as("date1"),
+			col("eventid").as("eventid1")
+		);
+
+		Dataset<Row> analyticsEvents2 = analyticsEvents.filter(
+			date_format(col("createdate"), "yyyy-MM-dd").geq(referenceDate.minusDays(1).toString()).
+			and(col("applicationid").equalTo("com.liferay.dynamic.data.mapping.forms.analytics:1.0.0"))
+		).select(
+			col("analyticskey").as("analyticskey2"),
+			col("eventproperties").getField("formId").as("formid2"),
+			col("eventproperties").getField("userId").as("userid2"),
+			col("createdate").cast("date").as("date2"),
+			col("eventid").as("eventid2")
+		);
+
+		Column analyticskeyColumn = 
+			analyticsEvents1.col("analyticskey1").equalTo(
+				analyticsEvents2.col("analyticskey2"));
+
+		Column formIdColumn = 
+			analyticsEvents1.col("formid1").equalTo(
+				analyticsEvents2.col("formid2"));
+
+		Column userIdColumn = 
+			analyticsEvents1.col("userid1").equalTo(
+				analyticsEvents2.col("userid2"));
+
+		Dataset<DropoffBean> dataset = analyticsEvents1.joinWith(
+			analyticsEvents2, 
+			analyticskeyColumn.and(formIdColumn).and(userIdColumn),
+			"left_outer"
+		).filter(
+			tuple -> {
+				return tuple._2 == null;
+			}
+		).map(
+			tuple -> {
+				return new DropoffBean(
+					Long.parseLong(tuple._1.get(2).toString()),
+					Long.parseLong(tuple._1.get(1).toString()),
+					tuple._1.getString(4).equals("FORM_SUBMIT") ? 1 : 0,
+					tuple._1.getDate(3), tuple._1.getString(0));
+			}, 
+			Encoders.bean(DropoffBean.class)
+		);
+
+		Dataset<Row> aggregatedDataset = dataset.groupBy(
+			col("analyticskey"), col("date"), col("formid"), col("userid") 
+		).agg(
+			sum("value").as("hasSubmit")
+		).filter(
+			col("hasSubmit").equalTo(0)
+		).withColumn(
+			"dropoffs", lit(1)
+		).select(
+			col("analyticskey"), 
+			col("formid"),
+			date_add(col("date"), 1).as("date"),
+			col("dropoffs")
+		).groupBy(
+			"analyticskey", "formid", "date"
+		).agg(
+			sum("dropoffs").as("dropoffs")
+		).withColumn(
+			"views", lit(0)
+		).withColumn(
+			"started", lit(0)
+		).withColumn(
+			"converted", lit(0)
+		).withColumn(
+			"convertedtotaltime", lit(0)
+		).withColumn(
+			"sessions", lit(0)
+		).select(
+			getFormsAggregatedDataColumns()
+		);
+
+		return aggregatedDataset;
+	}
+
 	protected static Dataset<Row> runConvertedTime(
 		SparkSession sparkSession, OffsetDateTime referenceDate) {
 
 		Dataset<Row> analyticsEvents = loadDataset(sparkSession);
-		
+
 		analyticsEvents = analyticsEvents.filter(
 			(col("applicationid").equalTo("com.liferay.dynamic.data.mapping.forms.analytics:1.0.0")).
 			and(col("eventid").equalTo("FORM_VIEW"))
@@ -91,7 +185,7 @@ public class FormsAnalyticsJob {
 			col("context").getField("sessionId").as("sessionid1"),
 			col("createdate").as("dateview")
 		);
-		
+
 		Dataset<Row> analyticsEventNew = getDataset(sparkSession, referenceDate, false);
 
 		analyticsEventNew = 
@@ -173,11 +267,11 @@ public class FormsAnalyticsJob {
 
 	protected static Dataset<Row> runSessions(
 		SparkSession sparkSession, OffsetDateTime referenceDate) {
-		
+
 		Dataset<Row> analyticsEventNew = getDataset(sparkSession, referenceDate, false);
-		
+
 		analyticsEventNew = analyticsEventNew.filter("eventid = 'FORM_VIEW'");
-		
+
 		Dataset<Row> dataset = analyticsEventNew.select(
 			col("analyticsKey").as("analyticskey"), 
 			col("eventproperties").getField("formId").as("formid"), 
@@ -257,7 +351,7 @@ public class FormsAnalyticsJob {
 			analyticsEventNew.col("eventid").equalTo(
 				analyticsEventOld.col("eventid"));
 
-		Dataset<FormEvent> viewDataset = analyticsEventNew.joinWith(
+		Dataset<ViewsStartedBean> viewDataset = analyticsEventNew.joinWith(
 			analyticsEventOld, 
 			formIdColumn.and(userIdColumn).and(eventColumn),
 			"left_outer"
@@ -273,13 +367,13 @@ public class FormsAnalyticsJob {
 			tuple -> {
 				Map<Object, Object> properties = tuple._1.getJavaMap(7);
 
-				return new FormEvent(
+				return new ViewsStartedBean(
 					Long.parseLong(properties.get("userId").toString()),
 					Long.parseLong(properties.get("formId").toString()),
 					tuple._1.getString(4), tuple._1.getTimestamp(1), 
 					tuple._1.getString(3));
 			}, 
-			Encoders.bean(FormEvent.class)
+			Encoders.bean(ViewsStartedBean.class)
 		);
 
 		Dataset<Row> viewDatasetGrouped = viewDataset.groupBy(
@@ -306,14 +400,14 @@ public class FormsAnalyticsJob {
 				FormsAggregatedData formsAggregatedData = 
 					new FormsAggregatedData(
 						row.getString(0), row.getLong(1), row.getDate(2));
-	
+
 				if(row.getString(3).equals("FORM_VIEW")) {
 					formsAggregatedData.setViews(row.getLong(4));
 				}
 				else {
 					formsAggregatedData.setStarted(row.getLong(4));
 				}
-	
+
 				return formsAggregatedData;
 			},
 			Encoders.bean(FormsAggregatedData.class)
@@ -342,12 +436,12 @@ public class FormsAnalyticsJob {
 			sum("started").as("started"),
 			sum("converted").as("converted"),
 			sum("convertedtotaltime").as("convertedtotaltime"),
-			sum("dropoffs").as("dropoffs")
+			max("dropoffs").as("dropoffs")
 		);
 
 		saveFormsAggregatedData(datasetToSave);
 	}
-	
+
 	protected static void saveFormsAggregatedData(Dataset<Row> dataset) {
 		dataset.write()
 			.format("org.apache.spark.sql.cassandra")
@@ -356,7 +450,7 @@ public class FormsAnalyticsJob {
 			.mode(SaveMode.Append)
 			.save();
 	}
-	
+
 	protected static Column[] getFormsAggregatedDataColumns() {
 		return new Column[] {
 			col("analyticskey"), col("formid"), col("date"),
@@ -403,7 +497,7 @@ public class FormsAnalyticsJob {
 				and(col("applicationid").equalTo("com.liferay.dynamic.data.mapping.forms.analytics:1.0.0"))
 			);
 		}
-		
+
 		return analyticsEventOld;
 	}
 }

@@ -13,3 +13,16 @@ CREATE TABLE Analytics.FormsAggregatedData (
 WITH CLUSTERING ORDER BY (formid ASC, date ASC)
 AND compaction = {'class': 'DateTieredCompactionStrategy'}
 AND default_time_to_live = 7776000;
+
+CREATE TABLE Analytics.FormFieldsAggregatedData (
+	analyticskey text,
+	formid bigint,
+	field text,
+	date date,
+	average bigint,
+	empty bigint
+	PRIMARY KEY(analyticskey, formid, field, date)
+)
+WITH CLUSTERING ORDER BY (formid ASC, date ASC)
+AND compaction = {'class': 'DateTieredCompactionStrategy'}
+AND default_time_to_live = 7776000;
