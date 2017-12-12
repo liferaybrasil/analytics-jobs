@@ -16,7 +16,6 @@ package com.liferay.forms.labs.spark;
 
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.lit;
-import static org.apache.spark.sql.functions.max;
 import static org.apache.spark.sql.functions.sum;
 
 import java.time.OffsetDateTime;
@@ -42,7 +41,8 @@ public class FormFieldsAnalyticsHelper {
 
 	public void run(OffsetDateTime referenceDate) {
 		unionAndSaveFormFieldsAggregatedDataset(
-			runInteractions(referenceDate)
+			runInteractions(referenceDate),
+			runRefilled(referenceDate)
 		);
 	}
 
@@ -101,6 +101,84 @@ public class FormFieldsAnalyticsHelper {
 		return dataset;
 	}
 
+	protected Dataset<Row> runRefilled(
+		OffsetDateTime referenceDate) {
+
+		Dataset<Row> dataset =
+			analyticsDataset.getDataset(sparkSession, referenceDate, false);
+
+		Dataset<Row> fieldBlurDataset = dataset.filter(
+			col("eventid").equalTo("FIELD_BLUR")
+		).select(
+			col("analyticsKey").as("analyticskey1"), 
+			col("eventproperties").getField("formId").as("formid1"),
+			col("eventproperties").getField("fieldName").as("field1"),
+			col("createdate").cast("date").as("date1")
+		).withColumn(
+			"totalinteractions", lit(1)
+		).groupBy(
+			col("analyticskey1"), col("formid1"), col("date1"),
+			col("field1")
+		).agg(
+			sum(col("totalinteractions")).as("totalinteractions")
+		).select(
+			col("analyticskey1"), col("formid1"), col("field1"),
+			col("date1"), col("totalinteractions")
+		);
+
+		Dataset<Row> formSubmitDataset = dataset.filter(
+			col("eventid").equalTo("FORM_SUBMIT")
+		).select(
+			col("analyticsKey").as("analyticskey2"), 
+			col("eventproperties").getField("formId").as("formid2"),
+			col("createdate").cast("date").as("date2")
+		).withColumn(
+			"totalsubmits", lit(1)
+		).groupBy(
+			col("analyticskey2"), col("formid2"), col("date2")
+		).agg(
+			sum(col("totalsubmits")).as("totalsubmits")
+		).select(
+			col("analyticskey2"), col("formid2"), 
+			col("date2"), col("totalsubmits")
+		);
+
+		Column analyticskeyColumn =
+			fieldBlurDataset.col("analyticskey1").equalTo(
+				formSubmitDataset.col("analyticskey2"));
+
+		Column formColumn =
+			fieldBlurDataset.col("formid1").equalTo(
+				formSubmitDataset.col("formid2"));
+
+		Column dateColumn = 
+			fieldBlurDataset.col("date1").equalTo(
+				formSubmitDataset.col("date2"));
+
+		Dataset<Row> aggregatedDataset = fieldBlurDataset.join(
+			formSubmitDataset, 
+			analyticskeyColumn.and(formColumn).and(dateColumn)
+		).select(
+			col("analyticskey1").as("analyticskey"),
+			col("formid1").as("formid"),
+			col("date1").as("date"),
+			col("field1").as("field"),
+			col("totalinteractions").minus(col("totalsubmits")).as("refilled")
+		).withColumn(
+			"empty", lit(0)
+		).withColumn(
+			"interactions", lit(0)
+		).withColumn(
+			"totaltime", lit(0)
+		).withColumn(
+			"dropoffs", lit(0)
+		).select(
+			getFormFieldsAggregatedDataColumns()
+		);
+
+		return aggregatedDataset;
+	}
+
 	protected void saveFormFieldsAggregatedData(Dataset<Row> dataset) {
 		dataset.write()
 			.format("org.apache.spark.sql.cassandra")
@@ -126,7 +204,7 @@ public class FormFieldsAnalyticsHelper {
 			sum("totaltime").as("totaltime"),
 			sum("empty").as("empty"),
 			sum("refilled").as("refilled"),
-			max("dropoffs").as("dropoffs")
+			sum("dropoffs").as("dropoffs")
 		);
 
 		saveFormFieldsAggregatedData(datasetToSave);
