@@ -57,32 +57,23 @@ public class WorkflowProcessAvg {
 		Dataset<Row> workflowProcessAvgExistDataSet,
 		Dataset<Row> workflowProcessAvgNewDataSet) {
 
-		workflowProcessAvgExistDataSet = workflowProcessAvgExistDataSet.filter(
-			col("analyticskey").isin(
-				workflowProcessAvgNewDataSet.select("analyticskey").columns()));
-
-		workflowProcessAvgExistDataSet = workflowProcessAvgExistDataSet.filter(
-			col("processversionid").isin(
-				workflowProcessAvgNewDataSet.select(
-					"processversionid").columns()));
-
-		workflowProcessAvgExistDataSet = workflowProcessAvgExistDataSet.filter(
-			col("date").isin(
-				workflowProcessAvgNewDataSet.select("date").columns()));
-
 		workflowProcessAvgExistDataSet = workflowProcessAvgExistDataSet.select(
-			"date", "analyticskey", "processid", "processversionid", "total",
-			"totalcompleted", "totalduration", "totalremoved");
+			"date", "analyticskey", "processid", "processversionid",
+			"totalcompleted", "totalduration", "totalremoved", "totalstarted");
+
+		workflowProcessAvgNewDataSet = workflowProcessAvgNewDataSet.select(
+			"date", "analyticskey", "processid", "processversionid",
+			"totalcompleted", "totalduration", "totalremoved", "totalstarted");
 
 		workflowProcessAvgNewDataSet =
 			workflowProcessAvgNewDataSet.union(workflowProcessAvgExistDataSet);
 
 		return workflowProcessAvgNewDataSet.groupBy(
 			"date", "analyticskey", "processid", "processversionid").agg(
-				sum("total").as("total"),
 				sum("totalcompleted").as("totalcompleted"),
+				sum("totalduration").as("totalduration"),
 				sum("totalremoved").as("totalremoved"),
-				sum("totalduration").as("totalduration"));
+				sum("totalstarted").as("totalstarted"));
 	}
 
 	protected static Dataset<Row> kaleoInstanceComplete(
@@ -100,13 +91,9 @@ public class WorkflowProcessAvg {
 				"processversionid"),
 			col("eventproperties").getField("duration").as("totalduration"));
 
-		analyticsEventDataSet = analyticsEventDataSet.withColumn(
+		return analyticsEventDataSet.withColumn(
 			"totalcompleted", lit(1)).withColumn(
-				"totalremoved", lit(0)).withColumn("total", lit(0));
-
-		return analyticsEventDataSet.select(
-			"date", "analyticskey", "processid", "processversionid", "total",
-			"totalcompleted", "totalduration", "totalremoved");
+				"totalremoved", lit(0)).withColumn("totalstarted", lit(0));
 	}
 
 	protected static Dataset<Row> kaleoInstanceCreate(
@@ -123,14 +110,10 @@ public class WorkflowProcessAvg {
 			col("eventproperties").getField("kaleoDefinitionVersionId").as(
 				"processversionid"));
 
-		analyticsEventDataSet = analyticsEventDataSet.withColumn(
+		return analyticsEventDataSet.withColumn(
 			"totalduration", lit(0)).withColumn(
 				"totalcompleted", lit(0)).withColumn(
-					"totalremoved", lit(0)).withColumn("total", lit(1));
-
-		return analyticsEventDataSet.select(
-			"date", "analyticskey", "processid", "processversionid", "total",
-			"totalcompleted", "totalduration", "totalremoved");
+					"totalremoved", lit(0)).withColumn("totalstarted", lit(1));
 	}
 
 	protected static Dataset<Row> kaleoInstanceRemove(
@@ -147,14 +130,10 @@ public class WorkflowProcessAvg {
 			col("eventproperties").getField("kaleoDefinitionVersionId").as(
 				"processversionid"));
 
-		analyticsEventDataSet = analyticsEventDataSet.withColumn(
+		return analyticsEventDataSet.withColumn(
 			"totalduration", lit(0)).withColumn(
 				"totalcompleted", lit(0)).withColumn(
-					"totalremoved", lit(1)).withColumn("total", lit(0));
-
-		return analyticsEventDataSet.select(
-			"date", "analyticskey", "processid", "processversionid", "total",
-			"totalcompleted", "totalduration", "totalremoved");
+					"totalremoved", lit(1)).withColumn("totalstarted", lit(0));
 	}
 
 	private final static Map<String, String> _workflowProcessAvgOptions =
