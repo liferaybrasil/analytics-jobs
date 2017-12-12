@@ -248,7 +248,7 @@ public class FormsAnalyticsHelper {
 			analyticsEvents1.col("userid1").equalTo(
 				analyticsEvents2.col("userid2"));
 
-		Dataset<FormsDropoffBean> dataset = analyticsEvents1.joinWith(
+		Dataset<FormsDropoff> dataset = analyticsEvents1.joinWith(
 			analyticsEvents2, 
 			analyticskeyColumn.and(formIdColumn).and(userIdColumn),
 			"left_outer"
@@ -258,13 +258,13 @@ public class FormsAnalyticsHelper {
 			}
 		).map(
 			tuple -> {
-				return new FormsDropoffBean(
+				return new FormsDropoff(
 					Long.parseLong(tuple._1.get(2).toString()),
 					Long.parseLong(tuple._1.get(1).toString()),
 					tuple._1.getString(4).equals("FORM_SUBMIT") ? 1 : 0,
 					tuple._1.getDate(3), tuple._1.getString(0));
 			}, 
-			Encoders.bean(FormsDropoffBean.class)
+			Encoders.bean(FormsDropoff.class)
 		);
 
 		Dataset<Row> aggregatedDataset = dataset.groupBy(
@@ -357,7 +357,7 @@ public class FormsAnalyticsHelper {
 			analyticsEventNew.col("eventid").equalTo(
 				analyticsEventOld.col("eventid"));
 
-		Dataset<FormsViewsStartedBean> viewDataset = analyticsEventNew.joinWith(
+		Dataset<FormsViewsStarted> viewDataset = analyticsEventNew.joinWith(
 			analyticsEventOld, 
 			formIdColumn.and(userIdColumn).and(eventColumn),
 			"left_outer"
@@ -373,13 +373,13 @@ public class FormsAnalyticsHelper {
 			tuple -> {
 				Map<Object, Object> properties = tuple._1.getJavaMap(7);
 
-				return new FormsViewsStartedBean(
+				return new FormsViewsStarted(
 					Long.parseLong(properties.get("userId").toString()),
 					Long.parseLong(properties.get("formId").toString()),
 					tuple._1.getString(4), tuple._1.getTimestamp(1), 
 					tuple._1.getString(3));
 			}, 
-			Encoders.bean(FormsViewsStartedBean.class)
+			Encoders.bean(FormsViewsStarted.class)
 		);
 
 		Dataset<Row> viewDatasetGrouped = viewDataset.groupBy(

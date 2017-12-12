@@ -55,6 +55,11 @@ public class FormsAnalyticsJob {
 
 		formsAnalyticsHelper.run(referenceDate);
 
+		FormFieldsAnalyticsHelper formFieldsAnalyticsHelper =
+			new FormFieldsAnalyticsHelper(analyticsDataset, sparkSession);
+
+		formFieldsAnalyticsHelper.run(referenceDate);
+
 		sparkSession.stop();
 	}
 }

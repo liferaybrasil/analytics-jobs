@@ -19,9 +19,9 @@ import java.sql.Date;
 /**
  * @author Leonardo Barros
  */
-public class FormsDropoffBean {
+public class FormsDropoff {
 
-	public FormsDropoffBean(long userId, long formId, int value, Date date, String analyticsKey) {
+	public FormsDropoff(long userId, long formId, int value, Date date, String analyticsKey) {
 		this.userId = userId;
 		this.formId = formId;
 		this.value = value;

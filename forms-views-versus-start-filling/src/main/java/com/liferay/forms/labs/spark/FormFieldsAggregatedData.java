@@ -19,13 +19,7 @@ import java.sql.Date;
 /**
  * @author Leonardo Barros
  */
-public class FormsAggregatedData {
-
-	public FormsAggregatedData(String analyticskey, long formId, Date date) {
-		this.analyticskey = analyticskey;
-		this.formid = formId;
-		this.date = date;
-	}
+public class FormFieldsAggregatedData {
 
 	public String getAnalyticskey() {
 		return analyticskey;
@@ -51,44 +45,44 @@ public class FormsAggregatedData {
 		this.date = date;
 	}
 
-	public long getViews() {
-		return views;
+	public String getField() {
+		return field;
 	}
 
-	public void setViews(long views) {
-		this.views = views;
+	public void setField(String field) {
+		this.field = field;
 	}
 
-	public long getSessions() {
-		return sessions;
+	public long getInteractions() {
+		return interactions;
 	}
 
-	public void setSessions(long sessions) {
-		this.sessions = sessions;
+	public void setInteractions(long interactions) {
+		this.interactions = interactions;
 	}
 
-	public long getStarted() {
-		return started;
+	public long getTotaltime() {
+		return totaltime;
 	}
 
-	public void setStarted(long started) {
-		this.started = started;
+	public void setTotaltime(long totaltime) {
+		this.totaltime = totaltime;
 	}
 
-	public long getConverted() {
-		return converted;
+	public long getEmpty() {
+		return empty;
 	}
 
-	public void setConverted(long converted) {
-		this.converted = converted;
+	public void setEmpty(long empty) {
+		this.empty = empty;
 	}
 
-	public long getConvertedtotaltime() {
-		return convertedtotaltime;
+	public long getRefilled() {
+		return refilled;
 	}
 
-	public void setConvertedtotaltime(long convertedtotaltime) {
-		this.convertedtotaltime = convertedtotaltime;
+	public void setRefilled(long refilled) {
+		this.refilled = refilled;
 	}
 
 	public long getDropoffs() {
@@ -102,10 +96,10 @@ public class FormsAggregatedData {
 	private String analyticskey;
 	private long formid;
 	private Date date;
-	private long views;
-	private long sessions;
-	private long started;
-	private long converted;
-	private long convertedtotaltime;
+	private String field;
+	private long interactions;
+	private long totaltime;
+	private long empty;
+	private long refilled;
 	private long dropoffs;
 }
