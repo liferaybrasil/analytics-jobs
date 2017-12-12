@@ -46,7 +46,7 @@ public class FormsAnalyticsJob {
 		SparkSession sparkSession = createSparkSession();
 
 		OffsetDateTime referenceDate = 
-			OffsetDateTime.now().minusMinutes(240);
+			OffsetDateTime.now().minusMinutes(5);
 
 		AnalyticsDataset analyticsDataset = new AnalyticsDatasetImpl();
 
