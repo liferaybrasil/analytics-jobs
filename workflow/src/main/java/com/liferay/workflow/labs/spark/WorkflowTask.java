@@ -98,7 +98,7 @@ public class WorkflowTask {
 			col("eventproperties").getField("kaleoDefinitionVersionId").as(
 				"processversionid"),
 			col("eventproperties").getField("kaleoTaskId").as("taskid"),
-			col("eventproperties").getField("name"),
+			col("eventproperties").getField("name").as("name"),
 			col("eventproperties").getField("duration").as("totalduration"));
 
 		return analyticsEventDataSet.withColumn("total", lit(1));
