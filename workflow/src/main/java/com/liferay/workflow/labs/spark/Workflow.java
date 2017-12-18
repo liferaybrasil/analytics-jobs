@@ -31,74 +31,66 @@ import org.apache.spark.sql.expressions.Window;
 /**
  * @author Inácio Nery
  */
-public class Workflows {
+public class Workflow {
 
 	public static void run(
 		SparkSession spark, Dataset<Row> analyticsEventDataSet) {
 
-		Dataset<Row> workflowsExistDataSet = doLoad(spark);
+		Dataset<Row> workflowExistDataSet = doLoad(spark);
 
-		Dataset<Row> workflowsNewDataSet =
-			doRun(analyticsEventDataSet, workflowsExistDataSet);
+		Dataset<Row> workflowNewDataSet =
+			doRun(analyticsEventDataSet, workflowExistDataSet);
 
-		doSave(workflowsNewDataSet);
+		doSave(workflowNewDataSet);
 	}
 
 	protected static Dataset<Row> doLoad(SparkSession spark) {
 
 		return spark.read().format("org.apache.spark.sql.cassandra").options(
-			_workflowsOptions).load();
+			_workflowOptions).load();
 	}
 
 	protected static Dataset<Row> doRun(
-		Dataset<Row> analyticsEventDataSet,
-		Dataset<Row> workflowsExistDataSet) {
+		Dataset<Row> analyticsEventDataSet, Dataset<Row> workflowExistDataSet) {
 
-		Dataset<Row> workflowsNewDataSet =
+		Dataset<Row> workflowNewDataSet =
 			kaleoDefinitionCreate(analyticsEventDataSet);
 
-		workflowsNewDataSet =
-			kaleoDefinitionUpdate(analyticsEventDataSet).union(
-				workflowsNewDataSet);
+		workflowNewDataSet = kaleoDefinitionUpdate(analyticsEventDataSet).union(
+			workflowNewDataSet);
 
-		workflowsNewDataSet =
-			kaleoDefinitionRemove(analyticsEventDataSet).union(
-				workflowsNewDataSet);
+		workflowNewDataSet = kaleoDefinitionRemove(analyticsEventDataSet).union(
+			workflowNewDataSet);
 
 		return filterAndRemoveDuplicates(
-			workflowsExistDataSet, workflowsNewDataSet);
+			workflowExistDataSet, workflowNewDataSet);
 	}
 
-	protected static void doSave(Dataset<Row> workflowsNewDataSet) {
+	protected static void doSave(Dataset<Row> workflowNewDataSet) {
 
-		workflowsNewDataSet.write().format(
-			"org.apache.spark.sql.cassandra").options(_workflowsOptions).mode(
+		workflowNewDataSet.write().format(
+			"org.apache.spark.sql.cassandra").options(_workflowOptions).mode(
 				SaveMode.Append).save();
 	}
 
 	protected static Dataset<Row> filterAndRemoveDuplicates(
-		Dataset<Row> workflowsExistDataSet, Dataset<Row> workflowsNewDataSet) {
+		Dataset<Row> workflowExistDataSet, Dataset<Row> workflowNewDataSet) {
 
-		workflowsExistDataSet = workflowsExistDataSet.filter(
-			col("analyticskey").isin(
-				workflowsNewDataSet.select("analyticskey").columns()));
-
-		workflowsExistDataSet = workflowsExistDataSet.filter(
-			col("processid").isin(
-				workflowsNewDataSet.select("processid").columns()));
-
-		workflowsExistDataSet = workflowsExistDataSet.select(
+		workflowExistDataSet = workflowExistDataSet.select(
 			"processid", "analyticskey", "deleted", "active", "title");
 
-		workflowsExistDataSet =
-			workflowsExistDataSet.withColumn("date", lit(null));
+		workflowExistDataSet =
+			workflowExistDataSet.withColumn("date", lit(null));
 
-		workflowsNewDataSet = workflowsNewDataSet.union(workflowsExistDataSet);
+		workflowNewDataSet = workflowNewDataSet.select(
+			"processid", "analyticskey", "deleted", "active", "title", "date");
+
+		workflowNewDataSet = workflowNewDataSet.union(workflowExistDataSet);
 
 		Column maxDate = max(col("date")).over(
 			Window.partitionBy("analyticskey", "processid"));
 
-		return workflowsNewDataSet.withColumn("max", maxDate).where(
+		return workflowNewDataSet.withColumn("max", maxDate).where(
 			col("date").geq(col("max"))).select(
 				"processid", "analyticskey", "deleted", "active", "title");
 	}
@@ -119,11 +111,7 @@ public class Workflows {
 					"active"),
 				col("eventproperties").getField("date").as("date"));
 
-		analyticsEventDataSet =
-			analyticsEventDataSet.withColumn("deleted", lit(false));
-
-		return analyticsEventDataSet.select(
-			"processid", "analyticskey", "deleted", "active", "title", "date");
+		return analyticsEventDataSet.withColumn("deleted", lit(false));
 	}
 
 	protected static Dataset<Row> kaleoDefinitionUpdate(
@@ -142,11 +130,7 @@ public class Workflows {
 					"active"),
 				col("eventproperties").getField("date").as("date"));
 
-		analyticsEventDataSet =
-			analyticsEventDataSet.withColumn("deleted", lit(false));
-
-		return analyticsEventDataSet.select(
-			"processid", "analyticskey", "deleted", "active", "title", "date");
+		return analyticsEventDataSet.withColumn("deleted", lit(false));
 	}
 
 	protected static Dataset<Row> kaleoDefinitionRemove(
@@ -165,19 +149,15 @@ public class Workflows {
 					"active"),
 				col("eventproperties").getField("date").as("date"));
 
-		analyticsEventDataSet =
-			analyticsEventDataSet.withColumn("deleted", lit(true));
-
-		return analyticsEventDataSet.select(
-			"processid", "analyticskey", "deleted", "active", "title", "date");
+		return analyticsEventDataSet.withColumn("deleted", lit(true));
 	}
 
-	private static final Map<String, String> _workflowsOptions =
+	private static final Map<String, String> _workflowOptions =
 		new HashMap<String, String>() {
 
 			{
 				put("keyspace", "analytics");
-				put("table", "workflows");
+				put("table", "workflow");
 			}
 		};
 }

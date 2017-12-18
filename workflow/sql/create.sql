@@ -1,4 +1,4 @@
-CREATE TABLE Analytics.WorkflowProcessAvg(
+CREATE TABLE analytics.workflowprocess(
 	analyticskey VARCHAR,
 	date DATE,
 	processid BIGINT,
@@ -12,41 +12,33 @@ CREATE TABLE Analytics.WorkflowProcessAvg(
 WITH compaction = { 'class': 'DateTieredCompactionStrategy' }
 AND default_time_to_live = 7776000;
 
-CREATE INDEX workflowprocessavg_processid ON Analytics.WorkflowProcessAvg(processid);
+CREATE INDEX workflowprocess_processid ON analytics.workflowprocess(processid);
 
-CREATE TABLE Analytics.WorkflowEntities(
-	entity TEXT,
-	id bigint,
-	name TEXT,
-	PRIMARY KEY(entity, id)
-)
-WITH compaction = { 'class': 'DateTieredCompactionStrategy' }
-AND default_time_to_live = 7776000;
-
-CREATE TABLE Analytics.WorkflowTaskAvg(
+CREATE TABLE analytics.workflowtask(
 	analyticskey VARCHAR,
 	date DATE,
-	taskid bigint,
-	processversionid bigint,
-	totalduration bigint,
-	total bigint,
-	PRIMARY KEY(analyticskey, date, taskid, processversionid)
+	processversionid BIGINT,
+	taskid BIGINT,
+	name TEXT,
+	total BIGINT,
+	totalduration BIGINT,
+	PRIMARY KEY(analyticskey, date, processversionid, taskid)
 )
 WITH compaction = { 'class': 'DateTieredCompactionStrategy' }
 AND default_time_to_live = 7776000;
 
-CREATE INDEX workflowtaskavg_processversionid ON Analytics.WorkflowTaskAvg(processversionid);
+CREATE INDEX workflowtasK_processversionid ON analytics.workflowtask(processversionid);
 
-CREATE TABLE Analytics.Workflows(
+CREATE TABLE analytics.workflow(
 	analyticskey VARCHAR,
-	processid bigint,
-	deleted boolean,
-	active boolean,
+	processid BIGINT,
+	active BOOLEAN,
+	deleted BOOLEAN,
 	title TEXT,
 	PRIMARY KEY(analyticskey, processid)
 )
 WITH compaction = { 'class': 'DateTieredCompactionStrategy' }
 AND default_time_to_live = 7776000;
 
-CREATE INDEX workflows_deleted ON Analytics.Workflows(deleted);
-CREATE INDEX workflows_processid ON Analytics.Workflows(processid);
+CREATE INDEX workflow_deleted ON analytics.workflow(deleted);
+CREATE INDEX workflow_processid ON analytics.workflow(processid);

@@ -29,69 +29,69 @@ import org.apache.spark.sql.SparkSession;
 /**
  * @author Inácio Nery
  */
-public class WorkflowProcessAvg {
+public class WorkflowProcess {
 
 	public static void run(
 		SparkSession spark, Dataset<Row> analyticsEventDataSet) {
 
-		Dataset<Row> workflowProcessAvgExistDataSet = doLoad(spark);
+		Dataset<Row> workflowProcessExistDataSet = doLoad(spark);
 
-		Dataset<Row> workflowProcessAvgNewDataSet =
-			doRun(analyticsEventDataSet, workflowProcessAvgExistDataSet);
+		Dataset<Row> workflowProcessNewDataSet =
+			doRun(analyticsEventDataSet, workflowProcessExistDataSet);
 
-		doSave(workflowProcessAvgNewDataSet);
+		doSave(workflowProcessNewDataSet);
 	}
 
 	protected static Dataset<Row> doLoad(SparkSession spark) {
 
 		return spark.read().format("org.apache.spark.sql.cassandra").options(
-			_workflowProcessAvgOptions).load();
+			_workflowProcessOptions).load();
 	}
 
 	protected static Dataset<Row> doRun(
 		Dataset<Row> analyticsEventDataSet,
-		Dataset<Row> workflowProcessAvgExistDataSet) {
+		Dataset<Row> workflowProcessExistDataSet) {
 
-		Dataset<Row> workflowProcessAvgNewDataSet =
+		Dataset<Row> workflowProcessNewDataSet =
 			kaleoInstanceCreate(analyticsEventDataSet);
 
-		workflowProcessAvgNewDataSet =
+		workflowProcessNewDataSet =
 			kaleoInstanceComplete(analyticsEventDataSet).union(
-				workflowProcessAvgNewDataSet);
+				workflowProcessNewDataSet);
 
-		workflowProcessAvgNewDataSet =
+		workflowProcessNewDataSet =
 			kaleoInstanceRemove(analyticsEventDataSet).union(
-				workflowProcessAvgNewDataSet);
+				workflowProcessNewDataSet);
 
-		workflowProcessAvgNewDataSet = filterAndGroupBy(
-			workflowProcessAvgExistDataSet, workflowProcessAvgNewDataSet);
+		workflowProcessNewDataSet = filterAndGroupBy(
+			workflowProcessExistDataSet, workflowProcessNewDataSet);
 
-		return workflowProcessAvgNewDataSet;
+		return workflowProcessNewDataSet;
 	}
 
-	protected static void doSave(Dataset<Row> workflowProcessAvgNewDataSet) {
+	protected static void doSave(Dataset<Row> workflowProcessNewDataSet) {
 
-		workflowProcessAvgNewDataSet.write().format(
+		workflowProcessNewDataSet.write().format(
 			"org.apache.spark.sql.cassandra").options(
-				_workflowProcessAvgOptions).mode(SaveMode.Append).save();
+				_workflowProcessOptions).mode(SaveMode.Append).save();
 	}
 
 	protected static Dataset<Row> filterAndGroupBy(
-		Dataset<Row> workflowProcessAvgExistDataSet,
-		Dataset<Row> workflowProcessAvgNewDataSet) {
+		Dataset<Row> workflowProcessExistDataSet,
+		Dataset<Row> workflowProcessNewDataSet) {
 
-		workflowProcessAvgExistDataSet = workflowProcessAvgExistDataSet.select(
+		workflowProcessExistDataSet = workflowProcessExistDataSet.select(
 			"date", "analyticskey", "processid", "processversionid",
 			"totalcompleted", "totalduration", "totalremoved", "totalstarted");
 
-		workflowProcessAvgNewDataSet = workflowProcessAvgNewDataSet.select(
+		workflowProcessNewDataSet = workflowProcessNewDataSet.select(
 			"date", "analyticskey", "processid", "processversionid",
 			"totalcompleted", "totalduration", "totalremoved", "totalstarted");
 
-		workflowProcessAvgNewDataSet =
-			workflowProcessAvgNewDataSet.union(workflowProcessAvgExistDataSet);
+		workflowProcessNewDataSet =
+			workflowProcessNewDataSet.union(workflowProcessExistDataSet);
 
-		return workflowProcessAvgNewDataSet.groupBy(
+		return workflowProcessNewDataSet.groupBy(
 			"date", "analyticskey", "processid", "processversionid").agg(
 				sum("totalcompleted").as("totalcompleted"),
 				sum("totalduration").as("totalduration"),
@@ -159,12 +159,12 @@ public class WorkflowProcessAvg {
 					"totalremoved", lit(1)).withColumn("totalstarted", lit(0));
 	}
 
-	private final static Map<String, String> _workflowProcessAvgOptions =
+	private final static Map<String, String> _workflowProcessOptions =
 		new HashMap<String, String>() {
 
 			{
 				put("keyspace", "analytics");
-				put("table", "workflowprocessavg");
+				put("table", "workflowprocess");
 			}
 		};
 }

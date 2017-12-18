@@ -29,73 +29,59 @@ import org.apache.spark.sql.SparkSession;
 /**
  * @author Inácio Nery
  */
-public class WorkflowTaskAvg {
+public class WorkflowTask {
 
 	public static void run(
 		SparkSession spark, Dataset<Row> analyticsEventDataSet) {
 
-		Dataset<Row> workflowTaskAvgExistDataSet = doLoad(spark);
+		Dataset<Row> workflowTaskExistDataSet = doLoad(spark);
 
-		Dataset<Row> workflowTaskAvgNewDataSet =
-			doRun(analyticsEventDataSet, workflowTaskAvgExistDataSet);
+		Dataset<Row> workflowTaskNewDataSet =
+			doRun(analyticsEventDataSet, workflowTaskExistDataSet);
 
-		doSave(workflowTaskAvgNewDataSet);
+		doSave(workflowTaskNewDataSet);
 	}
 
 	protected static Dataset<Row> doLoad(SparkSession spark) {
 
 		return spark.read().format("org.apache.spark.sql.cassandra").options(
-			_workflowTaskAvgOptions).load();
+			_workflowTaskOptions).load();
 	}
 
 	public static Dataset<Row> doRun(
 		Dataset<Row> analyticsEventDataSet,
-		Dataset<Row> workflowTaskAvgExistDataSet) {
+		Dataset<Row> workflowTaskExistDataSet) {
 
-		Dataset<Row> workflowTaskAvgNewDataSet =
+		Dataset<Row> workflowTaskNewDataSet =
 			kaleoTaskInstanceComplete(analyticsEventDataSet);
 
 		return filterAndGroupBy(
-			workflowTaskAvgExistDataSet, workflowTaskAvgNewDataSet);
+			workflowTaskExistDataSet, workflowTaskNewDataSet);
 	}
 
-	protected static void doSave(Dataset<Row> workflowTaskAvgNewDataSet) {
+	protected static void doSave(Dataset<Row> workflowTaskNewDataSet) {
 
-		workflowTaskAvgNewDataSet.write().format(
+		workflowTaskNewDataSet.write().format(
 			"org.apache.spark.sql.cassandra").options(
-				_workflowTaskAvgOptions).mode(SaveMode.Append).save();
+				_workflowTaskOptions).mode(SaveMode.Append).save();
 	}
 
 	protected static Dataset<Row> filterAndGroupBy(
-		Dataset<Row> workflowTaskAvgExistDataSet,
-		Dataset<Row> workflowTaskAvgNewDataSet) {
+		Dataset<Row> workflowTaskExistDataSet,
+		Dataset<Row> workflowTaskNewDataSet) {
 
-		workflowTaskAvgExistDataSet = workflowTaskAvgExistDataSet.filter(
-			col("analyticskey").isin(
-				workflowTaskAvgNewDataSet.select("analyticskey").columns()));
+		workflowTaskExistDataSet = workflowTaskExistDataSet.select(
+			"analyticskey", "date", "processversionid", "taskid", "name",
+			"total", "totalduration");
 
-		workflowTaskAvgExistDataSet = workflowTaskAvgExistDataSet.filter(
-			col("taskid").isin(
-				workflowTaskAvgNewDataSet.select("taskid").columns()));
+		workflowTaskNewDataSet = workflowTaskNewDataSet.select(
+			"analyticskey", "date", "processversionid", "taskid", "name",
+			"total", "totalduration");
+		workflowTaskNewDataSet =
+			workflowTaskNewDataSet.union(workflowTaskExistDataSet);
 
-		workflowTaskAvgExistDataSet = workflowTaskAvgExistDataSet.filter(
-			col("processversionid").isin(
-				workflowTaskAvgNewDataSet.select(
-					"processversionid").columns()));
-
-		workflowTaskAvgExistDataSet = workflowTaskAvgExistDataSet.filter(
-			col("date").isin(
-				workflowTaskAvgNewDataSet.select("date").columns()));
-
-		workflowTaskAvgExistDataSet = workflowTaskAvgExistDataSet.select(
-			"date", "analyticskey", "taskid", "processversionid", "total",
-			"totalduration");
-
-		workflowTaskAvgNewDataSet =
-			workflowTaskAvgNewDataSet.union(workflowTaskAvgExistDataSet);
-
-		return workflowTaskAvgNewDataSet.groupBy(
-			"date", "analyticskey", "taskid", "processversionid").agg(
+		return workflowTaskNewDataSet.groupBy(
+			"date", "analyticskey", "taskid", "processversionid", "name").agg(
 				sum("totalduration").as("totalduration"),
 				sum("total").as("total"));
 	}
@@ -112,22 +98,18 @@ public class WorkflowTaskAvg {
 			col("eventproperties").getField("kaleoDefinitionVersionId").as(
 				"processversionid"),
 			col("eventproperties").getField("kaleoTaskId").as("taskid"),
+			col("eventproperties").getField("name"),
 			col("eventproperties").getField("duration").as("totalduration"));
 
-		analyticsEventDataSet =
-			analyticsEventDataSet.withColumn("total", lit(1));
-
-		return analyticsEventDataSet.select(
-			"date", "analyticskey", "taskid", "processversionid", "total",
-			"totalduration");
+		return analyticsEventDataSet.withColumn("total", lit(1));
 	}
 
-	private static final Map<String, String> _workflowTaskAvgOptions =
+	private static final Map<String, String> _workflowTaskOptions =
 		new HashMap<String, String>() {
 
 			{
 				put("keyspace", "analytics");
-				put("table", "workflowtaskavg");
+				put("table", "workflowtask");
 			}
 		};
 }

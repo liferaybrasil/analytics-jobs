@@ -48,13 +48,11 @@ public class Main {
 		analyticsEventDataSet = analyticsEventDataSet.filter(
 			"applicationid = '" + _applicationId + "'");
 
-		WorkflowProcessAvg.run(spark, analyticsEventDataSet);
+		WorkflowProcess.run(spark, analyticsEventDataSet);
 
-		WorkflowTaskAvg.run(spark, analyticsEventDataSet);
+		WorkflowTask.run(spark, analyticsEventDataSet);
 
-		WorkflowEntities.run(spark, analyticsEventDataSet);
-
-		Workflows.run(spark, analyticsEventDataSet);
+		Workflow.run(spark, analyticsEventDataSet);
 
 		spark.stop();
 	}
