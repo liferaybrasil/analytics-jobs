@@ -24,26 +24,46 @@ import java.util.Map;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
+import org.apache.spark.sql.SparkSession;
 
 /**
  * @author Inácio Nery
  */
 public class WorkflowTaskAvg {
 
-	public static void doRun(
+	public static void run(
+		SparkSession spark, Dataset<Row> analyticsEventDataSet) {
+
+		Dataset<Row> workflowTaskAvgExistDataSet = doLoad(spark);
+
+		Dataset<Row> workflowTaskAvgNewDataSet =
+			doRun(analyticsEventDataSet, workflowTaskAvgExistDataSet);
+
+		doSave(workflowTaskAvgNewDataSet);
+	}
+
+	protected static Dataset<Row> doLoad(SparkSession spark) {
+
+		return spark.read().format("org.apache.spark.sql.cassandra").options(
+			_workflowTaskAvgOptions).load();
+	}
+
+	public static Dataset<Row> doRun(
 		Dataset<Row> analyticsEventDataSet,
 		Dataset<Row> workflowTaskAvgExistDataSet) {
 
 		Dataset<Row> workflowTaskAvgNewDataSet =
 			kaleoTaskInstanceComplete(analyticsEventDataSet);
 
-		workflowTaskAvgNewDataSet = filterAndGroupBy(
+		return filterAndGroupBy(
 			workflowTaskAvgExistDataSet, workflowTaskAvgNewDataSet);
+	}
+
+	protected static void doSave(Dataset<Row> workflowTaskAvgNewDataSet) {
 
 		workflowTaskAvgNewDataSet.write().format(
 			"org.apache.spark.sql.cassandra").options(
 				_workflowTaskAvgOptions).mode(SaveMode.Append).save();
-
 	}
 
 	protected static Dataset<Row> filterAndGroupBy(
@@ -110,5 +130,4 @@ public class WorkflowTaskAvg {
 				put("table", "workflowtaskavg");
 			}
 		};
-
 }

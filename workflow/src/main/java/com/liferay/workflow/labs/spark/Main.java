@@ -32,12 +32,10 @@ public class Main {
 
 	public static void main(String[] args) {
 
-		SparkSession spark =
-			SparkSession.builder().appName("Workflow").config(
-				"spark.cassandra.connection.host", "192.168.108.90").config(
-					"spark.cassandra.auth.username", "cassandra").config(
-						"spark.cassandra.auth.password",
-						"cassandra").getOrCreate();
+		SparkSession spark = SparkSession.builder().appName("Workflow").config(
+			"spark.cassandra.connection.host", "192.168.108.90").config(
+				"spark.cassandra.auth.username", "cassandra").config(
+					"spark.cassandra.auth.password", "cassandra").getOrCreate();
 
 		Dataset<Row> analyticsEventDataSet =
 			spark.read().format("org.apache.spark.sql.cassandra").options(
@@ -50,30 +48,17 @@ public class Main {
 		analyticsEventDataSet = analyticsEventDataSet.filter(
 			"applicationid = '" + _applicationId + "'");
 
-		Dataset<Row> workflowProcessAvgExistDataSet =
-			spark.read().format("org.apache.spark.sql.cassandra").options(
-				_workflowProcessAvgOptions).load();
+		WorkflowProcessAvg.run(spark, analyticsEventDataSet);
 
-		WorkflowProcessAvg.doRun(
-			analyticsEventDataSet, workflowProcessAvgExistDataSet);
+		WorkflowTaskAvg.run(spark, analyticsEventDataSet);
 
-		Dataset<Row> workflowTaskAvgExistDataSet =
-			spark.read().format("org.apache.spark.sql.cassandra").options(
-				_workflowTaskAvgOptions).load();
+		WorkflowEntities.run(spark, analyticsEventDataSet);
 
-		WorkflowProcessAvg.doRun(
-			analyticsEventDataSet, workflowTaskAvgExistDataSet);
-
-		WorkflowEntities.doRun(analyticsEventDataSet);
-
-		Dataset<Row> workflowsExistDataSet =
-			spark.read().format("org.apache.spark.sql.cassandra").options(
-				_workflowsOptions).load();
-
-		Workflows.doRun(analyticsEventDataSet, workflowsExistDataSet);
+		Workflows.run(spark, analyticsEventDataSet);
 
 		spark.stop();
 	}
+
 	private static final Map<String, String> _analyticsEventOptions =
 		new HashMap<String, String>() {
 
@@ -89,30 +74,4 @@ public class Main {
 	private final static String _last5Minutes =
 		OffsetDateTime.now().minusMinutes(5).toString();
 
-	private static final Map<String, String> _workflowsOptions =
-		new HashMap<String, String>() {
-
-			{
-				put("keyspace", "analytics");
-				put("table", "workflows");
-			}
-		};
-
-	private final static Map<String, String> _workflowProcessAvgOptions =
-		new HashMap<String, String>() {
-
-			{
-				put("keyspace", "analytics");
-				put("table", "workflowprocessavg");
-			}
-		};
-
-	private static final Map<String, String> _workflowTaskAvgOptions =
-		new HashMap<String, String>() {
-
-			{
-				put("keyspace", "analytics");
-				put("table", "workflowtaskavg");
-			}
-		};
 }

@@ -25,6 +25,7 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
+import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.expressions.Window;
 
 /**
@@ -32,7 +33,24 @@ import org.apache.spark.sql.expressions.Window;
  */
 public class Workflows {
 
-	public static void doRun(
+	public static void run(
+		SparkSession spark, Dataset<Row> analyticsEventDataSet) {
+
+		Dataset<Row> workflowsExistDataSet = doLoad(spark);
+
+		Dataset<Row> workflowsNewDataSet =
+			doRun(analyticsEventDataSet, workflowsExistDataSet);
+
+		doSave(workflowsNewDataSet);
+	}
+
+	protected static Dataset<Row> doLoad(SparkSession spark) {
+
+		return spark.read().format("org.apache.spark.sql.cassandra").options(
+			_workflowsOptions).load();
+	}
+
+	protected static Dataset<Row> doRun(
 		Dataset<Row> analyticsEventDataSet,
 		Dataset<Row> workflowsExistDataSet) {
 
@@ -47,8 +65,11 @@ public class Workflows {
 			kaleoDefinitionRemove(analyticsEventDataSet).union(
 				workflowsNewDataSet);
 
-		workflowsNewDataSet = filterAndRemoveDuplicates(
+		return filterAndRemoveDuplicates(
 			workflowsExistDataSet, workflowsNewDataSet);
+	}
+
+	protected static void doSave(Dataset<Row> workflowsNewDataSet) {
 
 		workflowsNewDataSet.write().format(
 			"org.apache.spark.sql.cassandra").options(_workflowsOptions).mode(
@@ -159,5 +180,4 @@ public class Workflows {
 				put("table", "workflows");
 			}
 		};
-
 }

@@ -24,13 +24,31 @@ import java.util.Map;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
+import org.apache.spark.sql.SparkSession;
 
 /**
  * @author Inácio Nery
  */
 public class WorkflowProcessAvg {
 
-	public static void doRun(
+	public static void run(
+		SparkSession spark, Dataset<Row> analyticsEventDataSet) {
+
+		Dataset<Row> workflowProcessAvgExistDataSet = doLoad(spark);
+
+		Dataset<Row> workflowProcessAvgNewDataSet =
+			doRun(analyticsEventDataSet, workflowProcessAvgExistDataSet);
+
+		doSave(workflowProcessAvgNewDataSet);
+	}
+
+	protected static Dataset<Row> doLoad(SparkSession spark) {
+
+		return spark.read().format("org.apache.spark.sql.cassandra").options(
+			_workflowProcessAvgOptions).load();
+	}
+
+	protected static Dataset<Row> doRun(
 		Dataset<Row> analyticsEventDataSet,
 		Dataset<Row> workflowProcessAvgExistDataSet) {
 
@@ -47,6 +65,11 @@ public class WorkflowProcessAvg {
 
 		workflowProcessAvgNewDataSet = filterAndGroupBy(
 			workflowProcessAvgExistDataSet, workflowProcessAvgNewDataSet);
+
+		return workflowProcessAvgNewDataSet;
+	}
+
+	protected static void doSave(Dataset<Row> workflowProcessAvgNewDataSet) {
 
 		workflowProcessAvgNewDataSet.write().format(
 			"org.apache.spark.sql.cassandra").options(

@@ -23,19 +23,32 @@ import java.util.Map;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
+import org.apache.spark.sql.SparkSession;
 
 /**
  * @author Inácio Nery
  */
 public class WorkflowEntities {
 
-	public static void doRun(Dataset<Row> analyticsEventDataSet) {
+	public static void run(
+		SparkSession spark, Dataset<Row> analyticsEventDataSet) {
+
+		Dataset<Row> workflowProcessAvgNewDataSet =
+			doRun(analyticsEventDataSet);
+
+		doSave(workflowProcessAvgNewDataSet);
+	}
+
+	protected static Dataset<Row> doRun(Dataset<Row> analyticsEventDataSet) {
 
 		Dataset<Row> workflowEntitiesNewDataSet =
 			kaleoDefinitionVersion(analyticsEventDataSet);
 
-		workflowEntitiesNewDataSet =
-			kaleoTask(analyticsEventDataSet).union(workflowEntitiesNewDataSet);
+		return kaleoTask(analyticsEventDataSet).union(
+			workflowEntitiesNewDataSet);
+	}
+
+	protected static void doSave(Dataset<Row> workflowEntitiesNewDataSet) {
 
 		workflowEntitiesNewDataSet.write().format(
 			"org.apache.spark.sql.cassandra").options(
@@ -83,5 +96,4 @@ public class WorkflowEntities {
 				put("table", "workflowentities");
 			}
 		};
-
 }
