@@ -44,15 +44,13 @@ public class FormsAnalyticsHelper {
 		this.analyticsDataset = analyticsDataset;
 		this.sparkSession = sparkSession;
 	}
-	
+
 	public void run(OffsetDateTime referenceDate) {
+
 		unionAndSaveFormsAggregatedDataset(
-			runConverted(referenceDate),
-			runConvertedTime(referenceDate),
-			runDropoffs(referenceDate),
-			runSessions(referenceDate),
-			runViewsStarted(referenceDate)
-		);
+			runConverted(referenceDate), runConvertedTime(referenceDate),
+			runDropoffs(referenceDate), runSessions(referenceDate),
+			runViewsStarted(referenceDate));
 	}
 
 	protected Column[] getFormsAggregatedDataColumns() {
@@ -76,8 +74,7 @@ public class FormsAnalyticsHelper {
 			);
 	}
 
-	protected Dataset<Row> runConverted(
-		OffsetDateTime referenceDate) {
+	protected Dataset<Row> runConverted(OffsetDateTime referenceDate) {
 
 		Dataset<Row> analyticsEventNew =
 			analyticsDataset.getDataset(sparkSession, referenceDate, false);
@@ -111,8 +108,7 @@ public class FormsAnalyticsHelper {
 		return dataset;
 	}
 
-	protected Dataset<Row> runConvertedTime(
-		OffsetDateTime referenceDate) {
+	protected Dataset<Row> runConvertedTime(OffsetDateTime referenceDate) {
 
 		Dataset<Row> analyticsEvents = 
 			analyticsDataset.loadDataset(sparkSession);
@@ -336,8 +332,7 @@ public class FormsAnalyticsHelper {
 		return dataset;
 	}
 
-	protected Dataset<Row> runViewsStarted(
-		OffsetDateTime referenceDate) {
+	protected Dataset<Row> runViewsStarted(OffsetDateTime referenceDate) {
 
 		Dataset<Row> analyticsEventOld = 
 			analyticsDataset.getDataset(sparkSession, referenceDate, true);

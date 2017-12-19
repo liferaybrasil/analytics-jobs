@@ -34,16 +34,15 @@ public class FormFieldsAnalyticsHelper {
 
 	public FormFieldsAnalyticsHelper(
 		AnalyticsDataset analyticsDataset, SparkSession sparkSession) {
-		
+
 		this.analyticsDataset = analyticsDataset;
 		this.sparkSession = sparkSession;
 	}
 
 	public void run(OffsetDateTime referenceDate) {
+
 		unionAndSaveFormFieldsAggregatedDataset(
-			runInteractions(referenceDate),
-			runRefilled(referenceDate)
-		);
+			runInteractions(referenceDate), runRefilled(referenceDate));
 	}
 
 	protected Column[] getFormFieldsAggregatedDataColumns() {

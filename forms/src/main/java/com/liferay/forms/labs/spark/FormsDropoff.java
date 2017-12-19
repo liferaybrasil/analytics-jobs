@@ -21,7 +21,9 @@ import java.sql.Date;
  */
 public class FormsDropoff {
 
-	public FormsDropoff(long userId, long formId, int value, Date date, String analyticsKey) {
+	public FormsDropoff(
+		long userId, long formId, int value, Date date, String analyticsKey) {
+
 		this.userId = userId;
 		this.formId = formId;
 		this.value = value;
@@ -30,42 +32,52 @@ public class FormsDropoff {
 	}
 
 	public long getUserId() {
+
 		return userId;
 	}
 
 	public void setUserId(long userId) {
+
 		this.userId = userId;
 	}
 
 	public long getFormId() {
+
 		return formId;
 	}
 
 	public void setFormId(long formId) {
+
 		this.formId = formId;
 	}
 
 	public int getValue() {
+
 		return value;
 	}
 
 	public void setValue(int value) {
+
 		this.value = value;
 	}
 
 	public Date getDate() {
+
 		return date;
 	}
 
 	public void setDate(Date date) {
+
 		this.date = date;
 	}
 
 	public String getAnalyticsKey() {
+
 		return analyticsKey;
 	}
 
 	public void setAnalyticsKey(String analyticsKey) {
+
 		this.analyticsKey = analyticsKey;
 	}
 

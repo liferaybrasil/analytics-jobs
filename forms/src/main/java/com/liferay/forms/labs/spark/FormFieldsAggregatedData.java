@@ -22,74 +22,92 @@ import java.sql.Date;
 public class FormFieldsAggregatedData {
 
 	public String getAnalyticskey() {
+
 		return analyticskey;
 	}
 
 	public void setAnalyticskey(String analyticskey) {
+
 		this.analyticskey = analyticskey;
 	}
 
 	public long getFormid() {
+
 		return formid;
 	}
 
 	public void setFormid(long formid) {
+
 		this.formid = formid;
 	}
 
 	public Date getDate() {
+
 		return date;
 	}
 
 	public void setDate(Date date) {
+
 		this.date = date;
 	}
 
 	public String getField() {
+
 		return field;
 	}
 
 	public void setField(String field) {
+
 		this.field = field;
 	}
 
 	public long getInteractions() {
+
 		return interactions;
 	}
 
 	public void setInteractions(long interactions) {
+
 		this.interactions = interactions;
 	}
 
 	public long getTotaltime() {
+
 		return totaltime;
 	}
 
 	public void setTotaltime(long totaltime) {
+
 		this.totaltime = totaltime;
 	}
 
 	public long getEmpty() {
+
 		return empty;
 	}
 
 	public void setEmpty(long empty) {
+
 		this.empty = empty;
 	}
 
 	public long getRefilled() {
+
 		return refilled;
 	}
 
 	public void setRefilled(long refilled) {
+
 		this.refilled = refilled;
 	}
 
 	public long getDropoffs() {
+
 		return dropoffs;
 	}
 
 	public void setDropoffs(long dropoffs) {
+
 		this.dropoffs = dropoffs;
 	}
 

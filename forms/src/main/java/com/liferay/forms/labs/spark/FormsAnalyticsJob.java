@@ -23,19 +23,21 @@ import org.apache.spark.sql.SparkSession;
  * @author Leonardo Barros
  */
 /*
- * FIELD_BLUR, FIELD_EMPTY, FIELD_FOCUS, FIELD_LOADED,
- * FIELD_STARTED_FILLING, FIELD_VALIDATION_ERROR, FORM_PAGE_SHOW,
- * FORM_PAGE_HIDE, FORM_VALIDATION_ERROR, FORM_VIEW, FORM_SUBMIT
+ * FIELD_BLUR, FIELD_EMPTY, FIELD_FOCUS, FIELD_LOADED, FIELD_STARTED_FILLING,
+ * FIELD_VALIDATION_ERROR, FORM_PAGE_SHOW, FORM_PAGE_HIDE,
+ * FORM_VALIDATION_ERROR, FORM_VIEW, FORM_SUBMIT
  */
 public class FormsAnalyticsJob {
 
 	private static SparkSession createSparkSession() {
-		SparkSession sparkSession = SparkSession.builder()
+
+		SparkSession sparkSession =
+			SparkSession.builder()
 				.appName("Forms View Started")
 				.config("spark.cassandra.connection.host", "192.168.108.90")
 				.config("spark.cassandra.auth.username", "cassandra")
 				.config("spark.cassandra.auth.password", "cassandra")
-					.master("local[*]").getOrCreate();
+				.getOrCreate();
 
 		sparkSession.sparkContext().setLogLevel("ERROR");
 
@@ -43,14 +45,14 @@ public class FormsAnalyticsJob {
 	}
 
 	protected static void doRun() {
+
 		SparkSession sparkSession = createSparkSession();
 
-		OffsetDateTime referenceDate = 
-			OffsetDateTime.now().minusMinutes(5);
+		OffsetDateTime referenceDate = OffsetDateTime.now().minusMinutes(5);
 
 		AnalyticsDataset analyticsDataset = new AnalyticsDatasetImpl();
 
-		FormsAnalyticsHelper formsAnalyticsHelper = 
+		FormsAnalyticsHelper formsAnalyticsHelper =
 			new FormsAnalyticsHelper(sparkSession, analyticsDataset);
 
 		formsAnalyticsHelper.run(referenceDate);

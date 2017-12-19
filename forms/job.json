@@ -1,0 +1,5 @@
+{
+	"class" : "com.liferay.forms.labs.spark.Main",
+	"cron"  : "*/5 * * * *",
+	"path"  : "target/forms.jar"
+}
