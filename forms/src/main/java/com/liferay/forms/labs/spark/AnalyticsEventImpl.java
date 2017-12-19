@@ -26,28 +26,28 @@ import org.apache.spark.sql.SparkSession;
 /**
  * @author Leonardo Barros
  */
-public class AnalyticsDatasetImpl implements AnalyticsDataset {
+public class AnalyticsEventImpl implements AnalyticsEvent {
 
 	@Override
 	public Dataset<Row> getDataset(
 		SparkSession sparkSession, OffsetDateTime referenceDate, boolean beforeReferenceDate) {
 
-		Dataset<Row> analyticsEventOld = loadDataset(sparkSession);
+		Dataset<Row> analyticsEvent = loadDataset(sparkSession);
 
 		if(beforeReferenceDate) {
-			analyticsEventOld = analyticsEventOld.filter(
+			analyticsEvent = analyticsEvent.filter(
 				date_format(col("createdate"), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX").leq(referenceDate.toString()).
-				and(col("applicationid").equalTo("com.liferay.dynamic.data.mapping.forms.analytics:1.0.0"))
+				and(col("applicationid").equalTo(APPLICATION_ID))
 			);
 		}
 		else {
-			analyticsEventOld = analyticsEventOld.filter(
+			analyticsEvent = analyticsEvent.filter(
 				date_format(col("createdate"), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX").gt(referenceDate.toString()).
-				and(col("applicationid").equalTo("com.liferay.dynamic.data.mapping.forms.analytics:1.0.0"))
+				and(col("applicationid").equalTo(APPLICATION_ID))
 			);
 		}
 
-		return analyticsEventOld;
+		return analyticsEvent;
 	}
 
 	@Override

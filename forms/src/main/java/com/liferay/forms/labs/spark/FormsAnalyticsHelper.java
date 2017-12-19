@@ -33,15 +33,19 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
 
+import com.liferay.forms.labs.spark.domain.FormsAggregatedData;
+import com.liferay.forms.labs.spark.domain.FormsDropoff;
+import com.liferay.forms.labs.spark.domain.FormsViewsStarted;
+
 /**
  * @author Leonardo Barros
  */
 public class FormsAnalyticsHelper {
 
 	public FormsAnalyticsHelper(
-		SparkSession sparkSession, AnalyticsDataset analyticsDataset) {
+		SparkSession sparkSession, AnalyticsEvent analyticsEvent) {
 
-		this.analyticsDataset = analyticsDataset;
+		this.analyticsEvent = analyticsEvent;
 		this.sparkSession = sparkSession;
 	}
 
@@ -54,6 +58,7 @@ public class FormsAnalyticsHelper {
 	}
 
 	protected Column[] getFormsAggregatedDataColumns() {
+
 		return new Column[] {
 			col("analyticskey"), col("formid"), col("date"),
 			col("views"), col("sessions"), col("started"),
@@ -63,6 +68,7 @@ public class FormsAnalyticsHelper {
 	}
 
 	protected Dataset<Row> loadAggregatedDataset() {
+
 		return sparkSession.read()
 			.format("org.apache.spark.sql.cassandra")
 			.option("keyspace", "analytics")
@@ -77,11 +83,11 @@ public class FormsAnalyticsHelper {
 	protected Dataset<Row> runConverted(OffsetDateTime referenceDate) {
 
 		Dataset<Row> analyticsEventNew =
-			analyticsDataset.getDataset(sparkSession, referenceDate, false);
+			analyticsEvent.getDataset(sparkSession, referenceDate, false);
 
 		analyticsEventNew = analyticsEventNew.filter("eventid = 'FORM_SUBMIT'");
 
-		Dataset<Row> dataset = analyticsEventNew.select(
+		return analyticsEventNew.select(
 			col("analyticsKey").as("analyticskey"), 
 			col("eventproperties").getField("formId").as("formid"), 
 			col("createdate").cast("date").as("date")
@@ -104,17 +110,15 @@ public class FormsAnalyticsHelper {
 		).select(
 			getFormsAggregatedDataColumns()
 		);
-
-		return dataset;
 	}
 
 	protected Dataset<Row> runConvertedTime(OffsetDateTime referenceDate) {
 
 		Dataset<Row> analyticsEvents = 
-			analyticsDataset.loadDataset(sparkSession);
+			analyticsEvent.loadDataset(sparkSession);
 
 		analyticsEvents = analyticsEvents.filter(
-			(col("applicationid").equalTo("com.liferay.dynamic.data.mapping.forms.analytics:1.0.0")).
+			(col("applicationid").equalTo(AnalyticsEvent.APPLICATION_ID)).
 			and(col("eventid").equalTo("FORM_VIEW"))
 		).select(
 			col("analyticskey").as("analyticskey1"),
@@ -126,7 +130,7 @@ public class FormsAnalyticsHelper {
 		);
 
 		Dataset<Row> analyticsEventNew = 
-			analyticsDataset.getDataset(sparkSession, referenceDate, false);
+			analyticsEvent.getDataset(sparkSession, referenceDate, false);
 
 		analyticsEventNew = 
 			analyticsEventNew.filter(
@@ -183,7 +187,7 @@ public class FormsAnalyticsHelper {
 			unix_timestamp(col("datesubmit")).minus(unix_timestamp(col("dateview")))
 		);
 
-		analyticsEventNew = analyticsEventNew.groupBy(
+		return analyticsEventNew.groupBy(
 			col("analyticskey"), col("userid"), col("formId"), col("formTransaction")
 		).agg(
 			max(col("datediff")).as("convertedtotaltime"),
@@ -201,18 +205,15 @@ public class FormsAnalyticsHelper {
 		).select(
 			getFormsAggregatedDataColumns()
 		);
-
-		return analyticsEventNew;
 	}
 
-	protected Dataset<Row> runDropoffs(
-		OffsetDateTime referenceDate) {
+	protected Dataset<Row> runDropoffs(OffsetDateTime referenceDate) {
 
-		Dataset<Row> analyticsEvents = analyticsDataset.loadDataset(sparkSession);
+		Dataset<Row> analyticsEvents = analyticsEvent.loadDataset(sparkSession);
 
 		Dataset<Row> analyticsEvents1 = analyticsEvents.filter(
 			date_format(col("createdate"), "yyyy-MM-dd").leq(referenceDate.minusDays(1).toString()).
-			and(col("applicationid").equalTo("com.liferay.dynamic.data.mapping.forms.analytics:1.0.0"))
+			and(col("applicationid").equalTo(AnalyticsEvent.APPLICATION_ID))
 		).select(
 			col("analyticskey").as("analyticskey1"),
 			col("eventproperties").getField("formId").as("formid1"),
@@ -223,7 +224,7 @@ public class FormsAnalyticsHelper {
 
 		Dataset<Row> analyticsEvents2 = analyticsEvents.filter(
 			date_format(col("createdate"), "yyyy-MM-dd").geq(referenceDate.minusDays(1).toString()).
-			and(col("applicationid").equalTo("com.liferay.dynamic.data.mapping.forms.analytics:1.0.0"))
+			and(col("applicationid").equalTo(AnalyticsEvent.APPLICATION_ID))
 		).select(
 			col("analyticskey").as("analyticskey2"),
 			col("eventproperties").getField("formId").as("formid2"),
@@ -263,7 +264,7 @@ public class FormsAnalyticsHelper {
 			Encoders.bean(FormsDropoff.class)
 		);
 
-		Dataset<Row> aggregatedDataset = dataset.groupBy(
+		return dataset.groupBy(
 			col("analyticskey"), col("date"), col("formid"), col("userid") 
 		).agg(
 			sum("value").as("hasSubmit")
@@ -293,19 +294,16 @@ public class FormsAnalyticsHelper {
 		).select(
 			getFormsAggregatedDataColumns()
 		);
-
-		return aggregatedDataset;
 	}
 
-	protected Dataset<Row> runSessions(
-		OffsetDateTime referenceDate) {
+	protected Dataset<Row> runSessions(OffsetDateTime referenceDate) {
 
 		Dataset<Row> analyticsEventNew = 
-			analyticsDataset.getDataset(sparkSession, referenceDate, false);
+			analyticsEvent.getDataset(sparkSession, referenceDate, false);
 
 		analyticsEventNew = analyticsEventNew.filter("eventid = 'FORM_VIEW'");
 
-		Dataset<Row> dataset = analyticsEventNew.select(
+		return analyticsEventNew.select(
 			col("analyticsKey").as("analyticskey"), 
 			col("eventproperties").getField("formId").as("formid"), 
 			col("createdate").cast("date").as("date")
@@ -328,17 +326,15 @@ public class FormsAnalyticsHelper {
 		).select(
 			getFormsAggregatedDataColumns()
 		);
-
-		return dataset;
 	}
 
 	protected Dataset<Row> runViewsStarted(OffsetDateTime referenceDate) {
 
 		Dataset<Row> analyticsEventOld = 
-			analyticsDataset.getDataset(sparkSession, referenceDate, true);
+			analyticsEvent.getDataset(sparkSession, referenceDate, true);
 
 		Dataset<Row> analyticsEventNew = 
-			analyticsDataset.getDataset(sparkSession, referenceDate, false);
+			analyticsEvent.getDataset(sparkSession, referenceDate, false);
 
 		Column formIdColumn = 
 			analyticsEventNew.col("eventproperties").getField("formId").equalTo(
@@ -396,7 +392,7 @@ public class FormsAnalyticsHelper {
 			sum("total").as("total")
 		);
 
-		Dataset<Row> dataset = viewDatasetGrouped.map(
+		return viewDatasetGrouped.map(
 			row -> {
 				FormsAggregatedData formsAggregatedData = 
 					new FormsAggregatedData(
@@ -415,11 +411,10 @@ public class FormsAnalyticsHelper {
 		).select(
 			getFormsAggregatedDataColumns()
 		);
-
-		return dataset;
 	}
 
 	protected void saveFormsAggregatedData(Dataset<Row> dataset) {
+
 		dataset.write()
 			.format("org.apache.spark.sql.cassandra")
 			.option("keyspace", "analytics")
@@ -429,7 +424,7 @@ public class FormsAnalyticsHelper {
 	}
 
 	protected void unionAndSaveFormsAggregatedDataset(
-		Dataset<Row>...datasets) {
+		Dataset<Row>... datasets) {
 
 		Dataset<Row> loadedDataset = loadAggregatedDataset();
 
@@ -451,6 +446,6 @@ public class FormsAnalyticsHelper {
 		saveFormsAggregatedData(datasetToSave);
 	}
 
-	private final AnalyticsDataset analyticsDataset;
+	private final AnalyticsEvent analyticsEvent;
 	private final SparkSession sparkSession;
 }

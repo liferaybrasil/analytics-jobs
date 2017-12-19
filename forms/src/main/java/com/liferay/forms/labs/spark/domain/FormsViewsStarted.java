@@ -12,7 +12,7 @@
  * details.
  */
 
-package com.liferay.forms.labs.spark;
+package com.liferay.forms.labs.spark.domain;
 
 import java.sql.Timestamp;
 
@@ -32,34 +32,9 @@ public class FormsViewsStarted {
 		this.analyticsKey = analyticsKey;
 	}
 
-	public long getUserId() {
+	public String getAnalyticsKey() {
 
-		return userId;
-	}
-
-	public void setUserId(long userId) {
-
-		this.userId = userId;
-	}
-
-	public long getFormId() {
-
-		return formId;
-	}
-
-	public void setFormId(long formId) {
-
-		this.formId = formId;
-	}
-
-	public String getEvent() {
-
-		return event;
-	}
-
-	public void setEvent(String event) {
-
-		this.event = event;
+		return analyticsKey;
 	}
 
 	public Timestamp getDate() {
@@ -67,14 +42,19 @@ public class FormsViewsStarted {
 		return date;
 	}
 
-	public void setDate(Timestamp date) {
+	public String getEvent() {
 
-		this.date = date;
+		return event;
 	}
 
-	public String getAnalyticsKey() {
+	public long getFormId() {
 
-		return analyticsKey;
+		return formId;
+	}
+
+	public long getUserId() {
+
+		return userId;
 	}
 
 	public void setAnalyticsKey(String analyticsKey) {
@@ -82,9 +62,29 @@ public class FormsViewsStarted {
 		this.analyticsKey = analyticsKey;
 	}
 
-	private long userId;
-	private long formId;
-	private String event;
-	private Timestamp date;
+	public void setDate(Timestamp date) {
+
+		this.date = date;
+	}
+
+	public void setEvent(String event) {
+
+		this.event = event;
+	}
+
+	public void setFormId(long formId) {
+
+		this.formId = formId;
+	}
+
+	public void setUserId(long userId) {
+
+		this.userId = userId;
+	}
+
 	private String analyticsKey;
+	private Timestamp date;
+	private String event;
+	private long formId;
+	private long userId;
 }

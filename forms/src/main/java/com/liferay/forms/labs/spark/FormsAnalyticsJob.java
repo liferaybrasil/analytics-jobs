@@ -29,6 +29,27 @@ import org.apache.spark.sql.SparkSession;
  */
 public class FormsAnalyticsJob {
 
+	protected static void run() {
+
+		SparkSession sparkSession = createSparkSession();
+
+		OffsetDateTime referenceDate = OffsetDateTime.now().minusMinutes(5);
+
+		AnalyticsEvent analyticsEvent = new AnalyticsEventImpl();
+
+		FormsAnalyticsHelper formsAnalyticsHelper =
+			new FormsAnalyticsHelper(sparkSession, analyticsEvent);
+
+		formsAnalyticsHelper.run(referenceDate);
+
+		FormFieldsAnalyticsHelper formFieldsAnalyticsHelper =
+			new FormFieldsAnalyticsHelper(analyticsEvent, sparkSession);
+
+		formFieldsAnalyticsHelper.run(referenceDate);
+
+		sparkSession.stop();
+	}
+
 	private static SparkSession createSparkSession() {
 
 		SparkSession sparkSession =
@@ -42,26 +63,5 @@ public class FormsAnalyticsJob {
 		sparkSession.sparkContext().setLogLevel("ERROR");
 
 		return sparkSession;
-	}
-
-	protected static void doRun() {
-
-		SparkSession sparkSession = createSparkSession();
-
-		OffsetDateTime referenceDate = OffsetDateTime.now().minusMinutes(5);
-
-		AnalyticsDataset analyticsDataset = new AnalyticsDatasetImpl();
-
-		FormsAnalyticsHelper formsAnalyticsHelper =
-			new FormsAnalyticsHelper(sparkSession, analyticsDataset);
-
-		formsAnalyticsHelper.run(referenceDate);
-
-		FormFieldsAnalyticsHelper formFieldsAnalyticsHelper =
-			new FormFieldsAnalyticsHelper(analyticsDataset, sparkSession);
-
-		formFieldsAnalyticsHelper.run(referenceDate);
-
-		sparkSession.stop();
 	}
 }

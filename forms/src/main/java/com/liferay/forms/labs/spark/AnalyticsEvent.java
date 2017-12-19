@@ -23,11 +23,14 @@ import org.apache.spark.sql.SparkSession;
 /**
  * @author Leonardo Barros
  */
-public interface AnalyticsDataset {
+public interface AnalyticsEvent {
 
-	Dataset<Row> getDataset(
+	public final String APPLICATION_ID =
+		"com.liferay.dynamic.data.mapping.forms.analytics:1.0.0";
+
+	public Dataset<Row> getDataset(
 		SparkSession sparkSession, OffsetDateTime referenceDate,
 		boolean beforeReferenceDate);
 
-	Dataset<Row> loadDataset(SparkSession sparkSession);
+	public Dataset<Row> loadDataset(SparkSession sparkSession);
 }

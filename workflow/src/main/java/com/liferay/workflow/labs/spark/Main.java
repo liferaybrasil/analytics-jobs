@@ -18,6 +18,7 @@ import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.date_format;
 
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -35,7 +36,8 @@ public class Main {
 		SparkSession spark = SparkSession.builder().appName("Workflow").config(
 			"spark.cassandra.connection.host", "192.168.108.90").config(
 				"spark.cassandra.auth.username", "cassandra").config(
-					"spark.cassandra.auth.password", "cassandra").getOrCreate();
+					"spark.cassandra.auth.password", "cassandra").master(
+						"local").getOrCreate();
 
 		Dataset<Row> analyticsEventDataSet =
 			spark.read().format("org.apache.spark.sql.cassandra").options(
@@ -69,7 +71,7 @@ public class Main {
 	private static final String _applicationId =
 		"com.liferay.portal.workflow.analytics:1.0.0";
 
-	private final static String _last5Minutes =
-		OffsetDateTime.now().minusMinutes(5).toString();
+	private final static String _last5Minutes = OffsetDateTime.of(
+		2017, 12, 18, 10, 06, 05, 0, ZoneOffset.ofHours(-3)).toString();
 
 }

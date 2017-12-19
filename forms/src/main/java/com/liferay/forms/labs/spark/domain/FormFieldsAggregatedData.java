@@ -12,7 +12,7 @@
  * details.
  */
 
-package com.liferay.forms.labs.spark;
+package com.liferay.forms.labs.spark.domain;
 
 import java.sql.Date;
 
@@ -26,79 +26,9 @@ public class FormFieldsAggregatedData {
 		return analyticskey;
 	}
 
-	public void setAnalyticskey(String analyticskey) {
-
-		this.analyticskey = analyticskey;
-	}
-
-	public long getFormid() {
-
-		return formid;
-	}
-
-	public void setFormid(long formid) {
-
-		this.formid = formid;
-	}
-
 	public Date getDate() {
 
 		return date;
-	}
-
-	public void setDate(Date date) {
-
-		this.date = date;
-	}
-
-	public String getField() {
-
-		return field;
-	}
-
-	public void setField(String field) {
-
-		this.field = field;
-	}
-
-	public long getInteractions() {
-
-		return interactions;
-	}
-
-	public void setInteractions(long interactions) {
-
-		this.interactions = interactions;
-	}
-
-	public long getTotaltime() {
-
-		return totaltime;
-	}
-
-	public void setTotaltime(long totaltime) {
-
-		this.totaltime = totaltime;
-	}
-
-	public long getEmpty() {
-
-		return empty;
-	}
-
-	public void setEmpty(long empty) {
-
-		this.empty = empty;
-	}
-
-	public long getRefilled() {
-
-		return refilled;
-	}
-
-	public void setRefilled(long refilled) {
-
-		this.refilled = refilled;
 	}
 
 	public long getDropoffs() {
@@ -106,18 +36,88 @@ public class FormFieldsAggregatedData {
 		return dropoffs;
 	}
 
+	public long getEmpty() {
+
+		return empty;
+	}
+
+	public String getField() {
+
+		return field;
+	}
+
+	public long getFormid() {
+
+		return formid;
+	}
+
+	public long getInteractions() {
+
+		return interactions;
+	}
+
+	public long getRefilled() {
+
+		return refilled;
+	}
+
+	public long getTotaltime() {
+
+		return totaltime;
+	}
+
+	public void setAnalyticskey(String analyticskey) {
+
+		this.analyticskey = analyticskey;
+	}
+
+	public void setDate(Date date) {
+
+		this.date = date;
+	}
+
 	public void setDropoffs(long dropoffs) {
 
 		this.dropoffs = dropoffs;
 	}
 
+	public void setEmpty(long empty) {
+
+		this.empty = empty;
+	}
+
+	public void setField(String field) {
+
+		this.field = field;
+	}
+
+	public void setFormid(long formid) {
+
+		this.formid = formid;
+	}
+
+	public void setInteractions(long interactions) {
+
+		this.interactions = interactions;
+	}
+
+	public void setRefilled(long refilled) {
+
+		this.refilled = refilled;
+	}
+
+	public void setTotaltime(long totaltime) {
+
+		this.totaltime = totaltime;
+	}
+
 	private String analyticskey;
-	private long formid;
 	private Date date;
-	private String field;
-	private long interactions;
-	private long totaltime;
-	private long empty;
-	private long refilled;
 	private long dropoffs;
+	private long empty;
+	private String field;
+	private long formid;
+	private long interactions;
+	private long refilled;
+	private long totaltime;
 }

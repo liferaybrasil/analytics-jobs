@@ -27,15 +27,17 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
 
+import com.liferay.forms.labs.spark.domain.FormFieldsAggregatedData;
+
 /**
  * @author Leonardo Barros
  */
 public class FormFieldsAnalyticsHelper {
 
 	public FormFieldsAnalyticsHelper(
-		AnalyticsDataset analyticsDataset, SparkSession sparkSession) {
+		AnalyticsEvent analyticsEvent, SparkSession sparkSession) {
 
-		this.analyticsDataset = analyticsDataset;
+		this.analyticsEvent = analyticsEvent;
 		this.sparkSession = sparkSession;
 	}
 
@@ -46,6 +48,7 @@ public class FormFieldsAnalyticsHelper {
 	}
 
 	protected Column[] getFormFieldsAggregatedDataColumns() {
+
 		return new Column[] {
 			col("analyticskey"), col("formid"), col("field"),
 			col("date"), col("interactions"), col("totaltime"),
@@ -54,6 +57,7 @@ public class FormFieldsAnalyticsHelper {
 	}
 
 	protected Dataset<Row> loadAggregatedDataset() {
+
 		return sparkSession.read()
 			.format("org.apache.spark.sql.cassandra")
 			.option("keyspace", "analytics")
@@ -65,13 +69,12 @@ public class FormFieldsAnalyticsHelper {
 			);
 	}
 
-	protected Dataset<Row> runInteractions(
-		OffsetDateTime referenceDate) {
+	protected Dataset<Row> runInteractions(OffsetDateTime referenceDate) {
 
 		Dataset<Row> dataset =
-			analyticsDataset.getDataset(sparkSession, referenceDate, false);
+			analyticsEvent.getDataset(sparkSession, referenceDate, false);
 
-		dataset = dataset.filter(
+		return dataset.filter(
 			col("eventid").equalTo("FIELD_BLUR")
 		).select(
 			col("analyticsKey").as("analyticskey"), 
@@ -96,15 +99,12 @@ public class FormFieldsAnalyticsHelper {
 		).select(
 			getFormFieldsAggregatedDataColumns()
 		);
-
-		return dataset;
 	}
 
-	protected Dataset<Row> runRefilled(
-		OffsetDateTime referenceDate) {
+	protected Dataset<Row> runRefilled(OffsetDateTime referenceDate) {
 
 		Dataset<Row> dataset =
-			analyticsDataset.getDataset(sparkSession, referenceDate, false);
+			analyticsEvent.getDataset(sparkSession, referenceDate, false);
 
 		Dataset<Row> fieldBlurDataset = dataset.filter(
 			col("eventid").equalTo("FIELD_BLUR")
@@ -154,7 +154,7 @@ public class FormFieldsAnalyticsHelper {
 			fieldBlurDataset.col("date1").equalTo(
 				formSubmitDataset.col("date2"));
 
-		Dataset<Row> aggregatedDataset = fieldBlurDataset.join(
+		return fieldBlurDataset.join(
 			formSubmitDataset, 
 			analyticskeyColumn.and(formColumn).and(dateColumn)
 		).select(
@@ -174,11 +174,10 @@ public class FormFieldsAnalyticsHelper {
 		).select(
 			getFormFieldsAggregatedDataColumns()
 		);
-
-		return aggregatedDataset;
 	}
 
 	protected void saveFormFieldsAggregatedData(Dataset<Row> dataset) {
+
 		dataset.write()
 			.format("org.apache.spark.sql.cassandra")
 			.option("keyspace", "analytics")
@@ -188,7 +187,7 @@ public class FormFieldsAnalyticsHelper {
 	}
 
 	protected void unionAndSaveFormFieldsAggregatedDataset(
-		Dataset<Row>...datasets) {
+		Dataset<Row>... datasets) {
 
 		Dataset<Row> loadedDataset = loadAggregatedDataset();
 
@@ -209,6 +208,6 @@ public class FormFieldsAnalyticsHelper {
 		saveFormFieldsAggregatedData(datasetToSave);
 	}
 
-	private final AnalyticsDataset analyticsDataset;
+	private final AnalyticsEvent analyticsEvent;
 	private final SparkSession sparkSession;
 }
