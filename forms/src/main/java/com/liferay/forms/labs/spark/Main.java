@@ -14,6 +14,9 @@
 
 package com.liferay.forms.labs.spark;
 
+/**
+ * @author Rafael Praxedes
+ */
 public class Main {
 
 	public static void main(String[] args) {

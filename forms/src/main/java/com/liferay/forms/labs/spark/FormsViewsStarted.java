@@ -16,6 +16,9 @@ package com.liferay.forms.labs.spark;
 
 import java.sql.Timestamp;
 
+/**
+ * @author Leonardo Barros
+ */
 public class FormsViewsStarted {
 
 	public FormsViewsStarted(
